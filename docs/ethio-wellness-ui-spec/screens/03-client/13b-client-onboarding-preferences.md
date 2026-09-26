@@ -1,0 +1,30 @@
+# Client onboarding — Preferences (`client-onboarding-preferences`)
+
+- **Purpose:** Collect a new client's preferred session languages and the types of support they're interested in, so counselor recommendations can be personalized from day one.
+- **Who can see it:** Signed-in clients who just finished `client-onboarding` step 1 (Profile). Not shown to guests or professionals.
+- **Layout regions:** Client topbar (logo, nav, language switcher, avatar) · step indicator (1 Profile done, 2 Preferences on) · centered narrow content column · settings card with two sections · action row (Back + Skip left, Continue right) · bottom nav (mobile) · site footer (desktop).
+- **Visible UI elements:**
+  - `.steps`: "1 · Profile" (done, green) · "2 · Preferences" (on, green)
+  - Heading: "What are you looking for?" + sub "Choose the languages you're comfortable with and the kinds of support you want. We'll use these to recommend counselors — you can change them anytime in Account."
+  - Section "Preferred language(s)": checkbox rows — Amharic · አማርኛ (checked), Tigrinya · ትግርኛ, Afaan Oromoo, English · እንግሊዝኛ (checked); note "Carried over from step 1 — adjust here if you like."; hint "Pick every language you're comfortable talking in. At least one is required."
+  - Section "Types of support": hint "Check at least one kind of support you're interested in."; search input "Search types of support…"; checkbox rows for the 8 starter categories — Individual Mental Health (checked in mock), Couples Counseling, Family Counseling, Addiction & Recovery, Grief and Loss, Youth and Students, Faith-informed Counseling, Career and Life Stress; growth note "New types of support are added as more counselors join — this list keeps growing."
+  - Action row: "Back" (secondary) · "Skip" (text link) · "Continue" (primary)
+  - Mobile bottom nav: Home, Services, Pros, Sessions, Account
+- **Primary actions (plain product language):**
+  - "Continue" (primary): enabled only when at least one language AND at least one type of support are selected; saves the preferences and goes to `client-home`; a confirmation toast "Your preferences are saved." appears on arrival.
+  - "Skip" (text link): leaves onboarding without saving and goes straight to `client-home`.
+  - "Back" (secondary): returns to `client-onboarding` step 1 (Profile) with step-1 entries preserved.
+- **Secondary actions:** Search field filters the support-type checkbox list as the user types (extensibility pattern for a growing catalog).
+- **Navigation (screen ids):**
+  - Continue → `client-home` (+ toast "Your preferences are saved.")
+  - Skip → `client-home`
+  - Back → `client-onboarding`
+  - Language switcher → same screen in that language
+  - Bottom nav (mobile) → `client-home`, `public-browse-services`, `public-professionals-list`, `client-my-sessions`, `account-settings`
+- **Fields:** Preferred language(s) — required, at least one. Types of support — required, at least one.
+- **Validation messages:**
+  - No language selected on Continue: "Please pick at least one language." (red, under the checkbox group); the screen stays, nothing is saved.
+  - No type of support selected on Continue: "Please choose at least one type of support." (red, under the checkbox group); the screen stays, nothing is saved.
+- **Variants:** Base frame only. Success variant: confirmation toast "Your preferences are saved." shown on `client-home` after Continue. Error variant: inline red message under the language group and/or the support-type group (documented, no separate frame).
+- **Responsive notes:** Desktop shows the 8 service types in a 2-column checkbox grid inside the ~640px centered column; on mobile (≤860px) the same list becomes a single full-width column, the top nav collapses into the `.bottomnav`, and the action row stacks with Continue full-width on top, then Back, then Skip. Checkbox rows keep ≥44px tap targets on both. The language section is identical on both — only spacing changes.
+- **Localization notes:** Language names always show both Latin and Ethiopic script (Amharic · አማርኛ). Ethiopic checkbox labels need extra line-height — rows must grow, never truncate. The search placeholder and both hints must be translated per locale. The growth note ("this list keeps growing") must read naturally in Amharic/Tigrinya/Afaan Oromoo — flag for native-speaker review.
