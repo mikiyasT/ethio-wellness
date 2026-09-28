@@ -5,15 +5,20 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
 import { useLocale } from "@/lib/locale";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
-export default function ClientSessionsPage() {
+function ClientSessionsInner() {
   const { t } = useLocale();
-  const [tab, setTab] = useState("upcoming");
+  const search = useSearchParams();
+  const initial = search.get("tab");
+  const [tab, setTab] = useState(
+    initial === "past" || initial === "cancelled" ? initial : "upcoming",
+  );
   const items = bookingsForStatus(tab as "upcoming" | "past" | "cancelled");
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <div className="mx-auto max-w-3xl">
       <h1 className="text-3xl font-bold text-ink">{t("sessions.title")}</h1>
       <div className="mt-6">
         <Tabs
@@ -53,5 +58,13 @@ export default function ClientSessionsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ClientSessionsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-ink-2">Loading…</div>}>
+      <ClientSessionsInner />
+    </Suspense>
   );
 }

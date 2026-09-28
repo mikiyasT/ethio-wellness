@@ -1,18 +1,35 @@
 "use client";
 
-import { availabilitySlots, professionals, routes } from "@ethio-wellness/shared";
+import { routes, slotsForProfessional } from "@ethio-wellness/shared";
 import { SlotChip } from "@/components/domain/slot-chip";
 import { Avatar } from "@/components/ui/avatar";
+import { resolveBookingContext } from "@/lib/booking";
 import { useLocale } from "@/lib/locale";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 
-export default function ClientBookPage() {
+function ClientBookInner() {
   const { t } = useLocale();
   const router = useRouter();
-  const professional = professionals[0];
-  const [selected, setSelected] = useState("slot-2");
-  const slots = availabilitySlots.filter((slot) => slot.professionalId === professional.id);
+  const search = useSearchParams();
+  const proSlug = search.get("pro");
+  const slotId = search.get("slot");
+  const { professional, slot, specialtyName, fee } = useMemo(
+    () => resolveBookingContext(proSlug, slotId),
+    [proSlug, slotId],
+  );
+  const slots = slotsForProfessional(professional.id);
+  const [selected, setSelected] = useState(slot?.id ?? "");
+  const selectedSlot = slots.find((item) => item.id === selected) ?? slot;
+  const dateLabel = selectedSlot ? `${selectedSlot.dayLabel}, ${selectedSlot.timeLabel}` : "TBD";
+
+  function continuePayment() {
+    const params = new URLSearchParams({
+      pro: professional.slug,
+      slot: selected || slot?.id || "",
+    });
+    router.push(`${routes.clientPayment}?${params.toString()}`);
+  }
 
   return (
     <div>
@@ -21,18 +38,20 @@ export default function ClientBookPage() {
         <div className="space-y-6 rounded-2xl border border-border bg-surface p-6">
           <section>
             <h2 className="font-semibold">{t("book.step1")}</h2>
-            <p className="mt-2 rounded-full border border-border bg-primary-tint px-4 py-3 text-primary">Sat Oct 3</p>
+            <p className="mt-2 rounded-full border border-border bg-primary-tint px-4 py-3 text-primary">
+              {selectedSlot?.dayLabel ?? "Pick a slot"}
+            </p>
           </section>
           <section>
             <h2 className="font-semibold">{t("book.step2")}</h2>
             <div className="mt-3 flex flex-wrap gap-2">
-              {slots.map((slot) => (
+              {slots.map((item) => (
                 <SlotChip
-                  key={slot.id}
-                  label={`${slot.dayLabel} ${slot.timeLabel}`}
-                  status={slot.status}
-                  selected={selected === slot.id}
-                  onClick={() => slot.status === "open" && setSelected(slot.id)}
+                  key={item.id}
+                  label={`${item.dayLabel} ${item.timeLabel}`}
+                  status={item.status}
+                  selected={selected === item.id}
+                  onClick={() => item.status === "open" && setSelected(item.id)}
                 />
               ))}
             </div>
@@ -43,16 +62,17 @@ export default function ClientBookPage() {
             <Avatar initials={professional.initials} avatarClass={professional.avatarClass} />
             <div>
               <p className="font-semibold">{professional.name}</p>
-              <p className="text-sm text-ink-2">Individual Mental Health</p>
+              <p className="text-sm text-ink-2">{specialtyName}</p>
             </div>
           </div>
-          <p className="mt-4 text-sm">Sat Oct 3, 4:00 PM</p>
+          <p className="mt-4 text-sm">{dateLabel}</p>
           <p className="text-sm">{t("book.duration")}</p>
-          <p className="mt-2 text-xl font-semibold">$25</p>
+          <p className="mt-2 text-xl font-semibold">{fee}</p>
           <button
             type="button"
-            onClick={() => router.push(routes.clientPayment)}
-            className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white"
+            disabled={!selectedSlot || selectedSlot.status !== "open"}
+            onClick={continuePayment}
+            className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white disabled:opacity-50"
           >
             {t("book.continue")}
           </button>
@@ -60,5 +80,13 @@ export default function ClientBookPage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function ClientBookPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-ink-2">Loading…</div>}>
+      <ClientBookInner />
+    </Suspense>
   );
 }

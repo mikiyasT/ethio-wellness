@@ -13,14 +13,18 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Tag } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { bookPath } from "@/lib/booking";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
 import { Star } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 export default function ProfessionalDetailPage() {
   const { t } = useLocale();
+  const router = useRouter();
+  const { role } = useSession();
   const params = useParams<{ slug: string }>();
   const professional = professionalBySlug(params.slug);
   const [gateOpen, setGateOpen] = useState(false);
@@ -45,6 +49,16 @@ export default function ProfessionalDetailPage() {
     return acc;
   }, {});
   const selectedSlot = slots.find((slot) => slot.id === selected);
+  const nextHref = selectedSlot ? bookPath(professional.slug, selectedSlot.id) : routes.clientBook;
+
+  function onBook() {
+    if (!selectedSlot) return;
+    if (role === "client") {
+      router.push(nextHref);
+      return;
+    }
+    setGateOpen(true);
+  }
 
   const bookingPanel = (
     <div className="rounded-2xl border border-border bg-surface p-5">
@@ -77,7 +91,7 @@ export default function ProfessionalDetailPage() {
               </div>
             </div>
           ))}
-          <Button disabled={!selectedSlot} onClick={() => setGateOpen(true)} block>
+          <Button disabled={!selectedSlot} onClick={onBook} block>
             {t("detail.book")}
             {selectedSlot ? ` · ${selectedSlot.timeLabel}` : ""}
           </Button>
@@ -133,15 +147,15 @@ export default function ProfessionalDetailPage() {
           </section>
           <dl className="mt-8 grid gap-3 rounded-2xl bg-surface-warm p-5 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-ink-3">{t("session.duration")}</dt>
+              <dt className="text-sm text-ink-3">{t("session.duration")}</dt>
               <dd>1 hour</dd>
             </div>
             <div>
-              <dt className="text-ink-3">{t("detail.video")}</dt>
+              <dt className="text-sm text-ink-3">Format</dt>
               <dd>{t("detail.video")}</dd>
             </div>
             <div>
-              <dt className="text-ink-3">Fee</dt>
+              <dt className="text-sm text-ink-3">Fee</dt>
               <dd>{t("detail.fee")}</dd>
             </div>
           </dl>
@@ -156,7 +170,7 @@ export default function ProfessionalDetailPage() {
           {t("detail.browseSimilar")}
         </ButtonLink>
       </div>
-      {gateOpen ? <AuthGate onClose={() => setGateOpen(false)} /> : null}
+      {gateOpen ? <AuthGate next={nextHref} onClose={() => setGateOpen(false)} /> : null}
     </div>
   );
 }

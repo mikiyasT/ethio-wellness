@@ -72,6 +72,7 @@ export const professionals: Professional[] = [
     reviewCount: 212,
     nextSlotLabel: "Today 4:00 PM",
     bio: "I help adults work through anxiety, grief, and major life transitions with warmth and without judgment.",
+    status: "approved",
   },
   {
     id: "pro-dawit-mekonnen",
@@ -87,6 +88,7 @@ export const professionals: Professional[] = [
     reviewCount: 167,
     nextSlotLabel: "Tomorrow 10:00 AM",
     bio: "Ten years supporting recovery and workplace wellbeing across Addis Ababa.",
+    status: "approved",
   },
   {
     id: "pro-tigist-haile",
@@ -102,6 +104,7 @@ export const professionals: Professional[] = [
     reviewCount: 143,
     nextSlotLabel: "Today 6:00 PM",
     bio: "I work with families and young people, in the language they think in.",
+    status: "approved",
   },
   {
     id: "pro-samuel-bekele",
@@ -117,6 +120,7 @@ export const professionals: Professional[] = [
     reviewCount: 198,
     nextSlotLabel: "Fri 2:00 PM",
     bio: "Helping couples and families communicate with honesty and care.",
+    status: "approved",
   },
   {
     id: "pro-almaz-girma",
@@ -132,6 +136,7 @@ export const professionals: Professional[] = [
     reviewCount: 121,
     nextSlotLabel: "Tomorrow 3:00 PM",
     bio: "Faith-sensitive counseling for stress, low mood, and life questions.",
+    status: "approved",
   },
   {
     id: "pro-yonas-tadesse",
@@ -147,6 +152,7 @@ export const professionals: Professional[] = [
     reviewCount: 89,
     nextSlotLabel: "Sat 11:00 AM",
     bio: "Diaspora-friendly evening hours (US time). Grief and adjustment support.",
+    status: "approved",
   },
   {
     id: "pro-meron-assefa",
@@ -162,6 +168,7 @@ export const professionals: Professional[] = [
     reviewCount: 104,
     nextSlotLabel: "Mon 9:00 AM",
     bio: "School and family support for teenagers and parents.",
+    status: "approved",
   },
   {
     id: "pro-kibrom-weldu",
@@ -177,6 +184,7 @@ export const professionals: Professional[] = [
     reviewCount: 76,
     nextSlotLabel: "Today 7:00 PM",
     bio: "Confidential recovery support, in Tigrinya or English.",
+    status: "approved",
   },
   {
     id: "pro-selamawit-kifle",
@@ -192,6 +200,7 @@ export const professionals: Professional[] = [
     reviewCount: 156,
     nextSlotLabel: "Tomorrow 1:00 PM",
     bio: "Couples and individual sessions in three languages.",
+    status: "approved",
   },
   {
     id: "pro-girma-alemu",
@@ -207,6 +216,7 @@ export const professionals: Professional[] = [
     reviewCount: 190,
     nextSlotLabel: "Sun 4:00 PM",
     bio: "Counseling grounded in faith, hope, and community.",
+    status: "approved",
   },
 ];
 
@@ -222,7 +232,7 @@ export const availabilitySlots: AvailabilitySlot[] = [
 ];
 
 export const clients: Client[] = [
-  { id: "client-miki", initials: "MT", name: "Miki Teshome", preferredLanguage: "amharic" },
+  { id: "client-abel", initials: "AD", name: "Abel Desta", preferredLanguage: "amharic" },
   { id: "client-sara", initials: "SB", name: "Sara Bekele", preferredLanguage: "english" },
   { id: "client-daniel", initials: "DH", name: "Daniel Haile", preferredLanguage: "tigrinya" },
 ];
@@ -231,7 +241,7 @@ export const bookings: Booking[] = [
   {
     id: "booking-1",
     professionalId: "pro-hana-tesfaye",
-    clientId: "client-miki",
+    clientId: "client-abel",
     specialty: "individual-mental-health",
     dateLabel: "Sat Oct 3, 4:00 PM EAT",
     status: "upcoming",
@@ -240,7 +250,7 @@ export const bookings: Booking[] = [
   {
     id: "booking-2",
     professionalId: "pro-tigist-haile",
-    clientId: "client-miki",
+    clientId: "client-abel",
     specialty: "family-counseling",
     dateLabel: "Tue Oct 6, 6:00 PM EAT",
     status: "upcoming",
@@ -249,7 +259,7 @@ export const bookings: Booking[] = [
   {
     id: "booking-3",
     professionalId: "pro-dawit-mekonnen",
-    clientId: "client-miki",
+    clientId: "client-abel",
     specialty: "career-and-life-stress",
     dateLabel: "Sep 12",
     status: "past",
@@ -257,7 +267,7 @@ export const bookings: Booking[] = [
   {
     id: "booking-4",
     professionalId: "pro-almaz-girma",
-    clientId: "client-miki",
+    clientId: "client-abel",
     specialty: "individual-mental-health",
     dateLabel: "Aug 28",
     status: "past",
@@ -265,7 +275,7 @@ export const bookings: Booking[] = [
   {
     id: "booking-5",
     professionalId: "pro-samuel-bekele",
-    clientId: "client-miki",
+    clientId: "client-abel",
     specialty: "couples-counseling",
     dateLabel: "Sep 5",
     status: "cancelled",
@@ -287,4 +297,12 @@ export function categoryById(id: string) {
 
 export function bookingsForStatus(status: Booking["status"]) {
   return bookings.filter((booking) => booking.status === status);
+}
+
+export function slotById(id: string) {
+  return availabilitySlots.find((slot) => slot.id === id);
+}
+
+export function slotsForProfessional(professionalId: string) {
+  return availabilitySlots.filter((slot) => slot.professionalId === professionalId);
 }

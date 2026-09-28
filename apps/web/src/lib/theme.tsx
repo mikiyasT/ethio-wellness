@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type Theme = "light" | "dark";
 
@@ -14,13 +14,8 @@ export const THEME_STORAGE_KEY = "ethio-wellness-theme";
 
 export function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  if (theme === "dark") {
-    root.dataset.theme = "dark";
-    root.style.colorScheme = "dark";
-  } else {
-    delete root.dataset.theme;
-    root.style.colorScheme = "light";
-  }
+  root.setAttribute("data-theme", theme);
+  root.style.colorScheme = theme;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -28,23 +23,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    const next: Theme =
-      stored === "dark" || document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+    const attr = document.documentElement.getAttribute("data-theme");
+    const next: Theme = stored === "dark" || attr === "dark" ? "dark" : "light";
     setThemeState(next);
     applyTheme(next);
   }, []);
 
-  const value = useMemo<ThemeContextValue>(
-    () => ({
-      theme,
-      setTheme: (next) => {
-        setThemeState(next);
-        applyTheme(next);
-        window.localStorage.setItem(THEME_STORAGE_KEY, next);
-      },
-    }),
-    [theme],
-  );
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    applyTheme(next);
+    window.localStorage.setItem(THEME_STORAGE_KEY, next);
+  }, []);
+
+  const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme }), [theme, setTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

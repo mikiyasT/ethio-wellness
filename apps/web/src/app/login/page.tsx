@@ -5,13 +5,17 @@ import { BrandMark } from "@/components/brand-mark";
 import { Alert } from "@/components/ui/alert";
 import { TextField } from "@/components/ui/field";
 import { useLocale } from "@/lib/locale";
+import { mockSessionForEmail } from "@/lib/mock-auth";
+import { useSession } from "@/lib/session";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
 
-export default function LoginPage() {
+function LoginInner() {
   const { t } = useLocale();
   const router = useRouter();
+  const search = useSearchParams();
+  const { setSession } = useSession();
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -26,10 +30,22 @@ export default function LoginPage() {
       nextErrors.form = t("login.invalid");
     }
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) {
-      router.push(email.includes("hana") ? routes.professionalHome : routes.clientHome);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    // TODO: replace with real auth
+    const session = mockSessionForEmail(email);
+    setSession(session);
+
+    const next = search.get("next");
+    if (next && next.startsWith("/") && session.role === "client") {
+      router.push(next);
+      return;
     }
+    router.push(session.role === "professional" ? routes.professionalHome : routes.clientHome);
   }
+
+  const next = search.get("next");
+  const registerHref = next ? `${routes.register}?next=${encodeURIComponent(next)}` : routes.register;
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
@@ -57,12 +73,20 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="mt-6 text-center text-sm">
-          <Link href={routes.register} className="text-primary">
+          <Link href={registerHref} className="text-primary">
             {t("login.newHere")}
           </Link>
         </p>
         <p className="mt-3 text-center text-xs text-ink-3">🔒 {t("login.privacy")}</p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-ink-2">Loading…</div>}>
+      <LoginInner />
+    </Suspense>
   );
 }

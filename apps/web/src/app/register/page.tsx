@@ -6,12 +6,13 @@ import { Alert } from "@/components/ui/alert";
 import { TextField } from "@/components/ui/field";
 import { useLocale } from "@/lib/locale";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
 
-export default function RegisterPage() {
+function RegisterInner() {
   const { t } = useLocale();
   const router = useRouter();
+  const search = useSearchParams();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -25,8 +26,19 @@ export default function RegisterPage() {
     if (!email) next.email = "Enter your email address";
     if (password.length < 8) next.password = "Use at least 8 characters";
     setErrors(next);
-    if (Object.keys(next).length === 0) router.push(routes.roleSelection);
+    if (Object.keys(next).length > 0) return;
+
+    const held = search.get("next");
+    const params = new URLSearchParams();
+    if (held) params.set("next", held);
+    if (name) params.set("name", name);
+    if (email) params.set("email", email);
+    const qs = params.toString();
+    router.push(qs ? `${routes.roleSelection}?${qs}` : routes.roleSelection);
   }
+
+  const next = search.get("next");
+  const loginHref = next ? `${routes.login}?next=${encodeURIComponent(next)}` : routes.login;
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
@@ -51,11 +63,19 @@ export default function RegisterPage() {
         </form>
         <p className="mt-4 text-sm text-ink-3">{t("register.terms")}</p>
         <p className="mt-4 text-sm">
-          <Link href={routes.login} className="text-primary">
+          <Link href={loginHref} className="text-primary">
             {t("register.hasAccount")}
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-ink-2">Loading…</div>}>
+      <RegisterInner />
+    </Suspense>
   );
 }
