@@ -69,11 +69,11 @@ export interface Client {
   preferredLanguage: LanguageId;
 }
 
-export const LOCALES: { id: Locale; label: string; eth?: boolean }[] = [
-  { id: "en", label: "EN" },
-  { id: "am", label: "አማ", eth: true },
-  { id: "ti", label: "ትግርኛ", eth: true },
-  { id: "om", label: "Afaan Oromoo" },
+export const LOCALES: { id: Locale; label: string; name: string; eth?: boolean }[] = [
+  { id: "en", label: "EN", name: "English" },
+  { id: "am", label: "አማ", name: "አማርኛ", eth: true },
+  { id: "ti", label: "ትግርኛ", name: "ትግርኛ", eth: true },
+  { id: "om", label: "Afaan Oromoo", name: "Afaan Oromoo" },
 ];
 
 export const LANGUAGES: { id: LanguageId; label: string; nativeLabel: string }[] = [

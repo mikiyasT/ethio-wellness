@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LanguageSwitcher } from "./language-switcher";
+import { ModeSwitcher } from "./mode-switcher";
 
 export function Header({ role }: { role: UserRole }) {
   const { t } = useLocale();
@@ -56,6 +57,7 @@ export function Header({ role }: { role: UserRole }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ModeSwitcher />
           <LanguageSwitcher />
           {role === "guest" ? (
             <>
