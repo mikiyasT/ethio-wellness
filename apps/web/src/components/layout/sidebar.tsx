@@ -43,7 +43,9 @@ export function Sidebar({ role }: { role: UserRole }) {
               href={item.href}
               className={cn(
                 "mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm",
-                active ? "bg-primary-tint font-semibold text-primary" : "text-ink-2 hover:bg-surface-warm",
+                active
+                  ? "bg-surface-warm font-semibold text-ink"
+                  : "text-ink-2 hover:bg-surface-warm hover:text-ink",
               )}
             >
               <Icon size={18} />

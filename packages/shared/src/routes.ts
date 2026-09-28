@@ -26,6 +26,7 @@ export const routes = {
   professionalSpecialties: "/professional/specialties",
   professionalAvailability: "/professional/availability",
   professionalBookings: "/professional/bookings",
+  professionalPending: "/professional/pending",
 } as const;
 
 export const guestNav: { href: string; labelKey: CopyKey }[] = [

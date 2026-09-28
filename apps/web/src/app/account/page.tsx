@@ -4,12 +4,18 @@ import { LANGUAGES, routes } from "@ethio-wellness/shared";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function AccountSettingsPage() {
   const { t, setLocale, locale } = useLocale();
+  const { signOut, user } = useSession();
+  const router = useRouter();
   const [saved, setSaved] = useState(false);
-  const [language, setLanguage] = useState(locale === "am" ? "amharic" : locale === "ti" ? "tigrinya" : locale === "om" ? "afaan-oromoo" : "english");
+  const [language, setLanguage] = useState(
+    locale === "am" ? "amharic" : locale === "ti" ? "tigrinya" : locale === "om" ? "afaan-oromoo" : "english",
+  );
 
   return (
     <div className="max-w-[560px]">
@@ -28,9 +34,14 @@ export default function AccountSettingsPage() {
             onChange={(event) => setLanguage(event.target.value)}
             className="mt-2 min-h-12 w-full rounded-[10px] border border-border bg-surface px-3"
           >
-            {LANGUAGES.map((item) => (
+            {LANGUAGES.filter((item) => item.id === "english" || item.id === "amharic").map((item) => (
               <option key={item.id} value={item.id}>
                 {item.nativeLabel}
+              </option>
+            ))}
+            {LANGUAGES.filter((item) => item.id === "tigrinya" || item.id === "afaan-oromoo").map((item) => (
+              <option key={item.id} value={item.id} disabled>
+                {item.nativeLabel} ({t("chrome.comingSoon")})
               </option>
             ))}
           </select>
@@ -38,15 +49,21 @@ export default function AccountSettingsPage() {
         </label>
         <div>
           <p className="font-medium">{t("account.email")}</p>
-          <input readOnly value="miki@example.com" className="mt-2 min-h-12 w-full rounded-[10px] border border-border bg-surface-warm px-3 text-ink-2" />
+          <input
+            readOnly
+            value={user.email ?? "abel@example.com"}
+            className="mt-2 min-h-12 w-full rounded-[10px] border border-border bg-surface-warm px-3 text-ink-2"
+          />
           <p className="mt-2 text-sm text-ink-3">{t("account.emailNote")}</p>
         </div>
         <div className="flex flex-col gap-3">
           <Button
             onClick={() => {
-              const map = { amharic: "am", tigrinya: "ti", "afaan-oromoo": "om", english: "en" } as const;
-              setLocale(map[language as keyof typeof map]);
-              setSaved(true);
+              const map = { amharic: "am", english: "en" } as const;
+              if (language === "amharic" || language === "english") {
+                setLocale(map[language]);
+                setSaved(true);
+              }
             }}
           >
             {t("account.save")}
@@ -54,9 +71,15 @@ export default function AccountSettingsPage() {
           <ButtonLink href={routes.resetPassword} variant="secondary">
             {t("account.changePassword")}
           </ButtonLink>
-          <ButtonLink href={routes.home} variant="danger">
+          <Button
+            variant="danger"
+            onClick={() => {
+              signOut();
+              router.push(routes.home);
+            }}
+          >
             {t("account.signOut")}
-          </ButtonLink>
+          </Button>
         </div>
       </div>
     </div>

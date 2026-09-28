@@ -34,7 +34,7 @@ export function Header({ role }: { role: UserRole }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-bg/95 backdrop-blur">
+    <header className="sticky top-0 z-40 overflow-visible border-b border-border/70 bg-bg/95 backdrop-blur">
       <div className="mx-auto flex min-h-[72px] max-w-[1200px] items-center justify-between gap-4 px-4">
         <Link href={homeHref} className="flex items-center gap-2 font-semibold text-ink">
           <BrandMark />
@@ -48,7 +48,9 @@ export function Header({ role }: { role: UserRole }) {
               href={item.href}
               className={cn(
                 "inline-flex min-h-10 items-center rounded-full px-4 text-sm font-medium",
-                isActive(item.href) ? "bg-primary-tint text-primary" : "text-ink-2 hover:bg-surface-warm",
+                isActive(item.href)
+                  ? "bg-surface-warm font-semibold text-ink"
+                  : "text-ink-2 hover:bg-surface-warm hover:text-ink",
               )}
             >
               {t(item.labelKey)}
@@ -56,7 +58,7 @@ export function Header({ role }: { role: UserRole }) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <ModeSwitcher />
           <LanguageSwitcher />
           {role === "guest" ? (
@@ -77,8 +79,8 @@ export function Header({ role }: { role: UserRole }) {
               </button>
             </>
           ) : (
-            <ButtonLink href={routes.account} variant="secondary" size="sm" className="h-10 w-10 !px-0">
-              {role === "professional" ? "HT" : "MT"}
+            <ButtonLink href={routes.account} variant="secondary" size="sm" className="keep-round h-10 w-10 !px-0">
+              {role === "professional" ? "HT" : "AD"}
             </ButtonLink>
           )}
         </div>

@@ -10,17 +10,18 @@ export function Tabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex gap-4 border-b border-border">
-      {tabs.map((tab) => (
+    <div className="inline-flex max-w-full overflow-x-auto rounded-[10px] border border-border bg-surface">
+      {tabs.map((tab, index) => (
         <button
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
           className={cn(
-            "min-h-11 border-b-2 px-1 text-base",
+            "min-h-11 shrink-0 px-4 text-sm",
+            index > 0 && "border-l border-border",
             value === tab.id
-              ? "border-primary font-semibold text-primary"
-              : "border-transparent text-ink-2",
+              ? "bg-bg font-semibold text-ink"
+              : "text-ink-2 hover:bg-surface-warm hover:text-ink",
           )}
         >
           {tab.label}

@@ -14,7 +14,7 @@ export type CategoryId =
 
 export type LanguageId = "amharic" | "tigrinya" | "afaan-oromoo" | "english";
 
-export type SlotStatus = "open" | "booked";
+export type SlotStatus = "open" | "booked" | "closed";
 
 export type BookingStatus = "upcoming" | "past" | "cancelled";
 
@@ -41,6 +41,8 @@ export interface Professional {
   reviewCount: number;
   nextSlotLabel: string;
   bio: string;
+  /** Pilot: new professionals wait for manual approval before practicing. */
+  status?: "pending" | "approved";
 }
 
 export interface AvailabilitySlot {
@@ -49,6 +51,8 @@ export interface AvailabilitySlot {
   dayLabel: string;
   timeLabel: string;
   status: SlotStatus;
+  /** ISO date YYYY-MM-DD when known (professional availability editor). */
+  date?: string;
 }
 
 export interface Booking {

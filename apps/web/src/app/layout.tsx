@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: "Support for your mind, in the language of your heart.",
 };
 
-const themeInit = `(function(){try{var t=localStorage.getItem("ethio-wellness-theme");if(t==="dark"){document.documentElement.dataset.theme="dark";document.documentElement.style.colorScheme="dark";}}catch(e){}})();`;
+const themeInit = `(function(){try{var t=localStorage.getItem("ethio-wellness-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");document.documentElement.style.colorScheme=t==="dark"?"dark":"light";}catch(e){}document.addEventListener("change",function(e){var el=e.target;if(!el||el.getAttribute("data-chrome")!=="theme")return;var v=el.value==="dark"?"dark":"light";document.documentElement.setAttribute("data-theme",v);document.documentElement.style.colorScheme=v;try{localStorage.setItem("ethio-wellness-theme",v);}catch(err){}},true);})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -1,80 +1,34 @@
 "use client";
 
-import { LOCALES } from "@ethio-wellness/shared";
-import { cn } from "@/lib/cn";
+import { LOCALES, type Locale } from "@ethio-wellness/shared";
+import { NativeSelect } from "@/components/ui/native-select";
 import { useLocale } from "@/lib/locale";
-import { Check, ChevronDown } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+
+/** Full UI translations ship for EN + Amharic draft. TI/OM await native review. */
+const AVAILABLE: Locale[] = ["en", "am"];
 
 export function LanguageSwitcher() {
-  const { locale, setLocale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const listId = useId();
-  const selected = LOCALES.find((item) => item.id === locale) ?? LOCALES[0];
-
-  useEffect(() => {
-    function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onPointerDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, []);
+  const { t, locale, setLocale } = useLocale();
 
   return (
-    <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-label="Language"
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-ink"
-      >
-        <span className={cn(selected.eth && "eth")}>{selected.label}</span>
-        <ChevronDown size={16} className={cn("text-ink-2 transition", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <ul
-          id={listId}
-          role="listbox"
-          aria-label="Language"
-          className="absolute right-0 z-50 mt-2 min-w-[13.5rem] overflow-hidden rounded-2xl border border-border bg-surface py-1 shadow-lg"
-        >
-          {LOCALES.map((item) => {
-            const active = item.id === locale;
-            return (
-              <li key={item.id} role="option" aria-selected={active}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocale(item.id);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex min-h-11 w-full items-center justify-between gap-3 px-3 text-left text-sm",
-                    active ? "bg-primary-tint font-semibold text-primary" : "text-ink hover:bg-surface-warm",
-                    item.eth && "eth",
-                  )}
-                >
-                  <span>{item.name}</span>
-                  {active ? <Check size={16} /> : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
+    <NativeSelect
+      chrome="locale"
+      label="Language"
+      value={AVAILABLE.includes(locale) ? locale : "en"}
+      onChange={(value) => {
+        if (AVAILABLE.includes(value as Locale)) setLocale(value as Locale);
+      }}
+    >
+      {LOCALES.filter((item) => AVAILABLE.includes(item.id)).map((item) => (
+        <option key={item.id} value={item.id} className={item.eth ? "eth" : undefined}>
+          {item.name}
+        </option>
+      ))}
+      {LOCALES.filter((item) => !AVAILABLE.includes(item.id)).map((item) => (
+        <option key={item.id} value={item.id} disabled>
+          {item.name} ({t("chrome.comingSoon")})
+        </option>
+      ))}
+    </NativeSelect>
   );
 }

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   color-scheme: light;
   --primary: #1c5c3a;
@@ -26,20 +28,29 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #04110b;
-  --surface: rgba(234, 243, 237, 0.14);
-  --surface-warm: rgba(234, 243, 237, 0.08);
-  --border: rgba(234, 243, 237, 0.2);
-  --border-strong: rgba(234, 243, 237, 0.32);
-  --text: #faf6ee;
-  --text-2: #e7dcc6;
-  --text-3: #d6c8a8;
-  --primary-dark: #020805;
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-warm: #21262d;
+  --border: #30363d;
+  --border-strong: #3d444d;
+  --text: #e6edf3;
+  --text-2: #9198a1;
+  --text-3: #6e7681;
+  --primary: #238636;
+  --primary-hover: #2ea043;
+  --primary-dark: #010409;
+  --primary-tint: #21262d;
+  --gold-tint: #21262d;
+  --info: #4493f8;
 }
 
-[data-theme="dark"] .bg-surface,
-[data-theme="dark"] .bg-surface-warm {
-  backdrop-filter: blur(16px);
+[data-theme="dark"] .rounded-2xl,
+[data-theme="dark"] .rounded-3xl {
+  border-radius: 6px;
+}
+
+[data-theme="dark"] .rounded-full:not(.keep-round) {
+  border-radius: 6px;
 }
 
 @theme inline {
@@ -84,6 +95,16 @@ input,
 select,
 textarea {
   outline: none;
+}
+
+select {
+  color: var(--text);
+  background-color: var(--surface);
+}
+
+select option {
+  color: var(--text);
+  background-color: var(--surface);
 }
 
 a:focus-visible,

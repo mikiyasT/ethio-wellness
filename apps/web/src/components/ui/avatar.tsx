@@ -12,7 +12,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
+        "keep-round inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
         size === "sm" && "h-10 w-10 text-sm",
         size === "md" && "h-12 w-12 text-base",
         size === "lg" && "h-16 w-16 text-xl",

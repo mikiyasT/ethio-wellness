@@ -23,7 +23,7 @@ export default function ClientOnboardingPage() {
       <h1 className="text-3xl font-bold text-ink">{t("onboard.title")}</h1>
       <p className="mt-2 text-ink-2">{t("onboard.sub")}</p>
       <form className="mt-6 space-y-6" onSubmit={onSubmit}>
-        <TextField label="Display name" name="name" defaultValue="Miki Teshome" />
+        <TextField label="Display name" name="name" defaultValue="Abel Desta" />
         <div>
           <p className="mb-2 text-sm font-medium">{t("account.language")}</p>
           <div className="flex flex-wrap gap-2">
