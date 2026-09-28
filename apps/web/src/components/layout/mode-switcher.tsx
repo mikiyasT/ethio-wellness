@@ -1,17 +1,22 @@
 "use client";
 
-import { LOCALES } from "@ethio-wellness/shared";
 import { cn } from "@/lib/cn";
 import { useLocale } from "@/lib/locale";
-import { Check, ChevronDown } from "lucide-react";
+import { useTheme, type Theme } from "@/lib/theme";
+import { Check, ChevronDown, Moon, Sun } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
-export function LanguageSwitcher() {
-  const { locale, setLocale } = useLocale();
+const MODES: { id: Theme; labelKey: "chrome.bright" | "chrome.night"; icon: typeof Sun }[] = [
+  { id: "light", labelKey: "chrome.bright", icon: Sun },
+  { id: "dark", labelKey: "chrome.night", icon: Moon },
+];
+
+export function ModeSwitcher() {
+  const { t } = useLocale();
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
-  const selected = LOCALES.find((item) => item.id === locale) ?? LOCALES[0];
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
@@ -37,37 +42,42 @@ export function LanguageSwitcher() {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        aria-label="Language"
+        aria-label={t("chrome.mode")}
         onClick={() => setOpen((value) => !value)}
         className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-ink"
       >
-        <span className={cn(selected.eth && "eth")}>{selected.label}</span>
+        <Sun size={16} className="icon-sun text-ink-2" />
+        <Moon size={16} className="icon-moon text-ink-2" />
+        <span>{t("chrome.mode")}</span>
         <ChevronDown size={16} className={cn("text-ink-2 transition", open && "rotate-180")} />
       </button>
       {open ? (
         <ul
           id={listId}
           role="listbox"
-          aria-label="Language"
-          className="absolute right-0 z-50 mt-2 min-w-[13.5rem] overflow-hidden rounded-2xl border border-border bg-surface py-1 shadow-lg"
+          aria-label={t("chrome.mode")}
+          className="absolute right-0 z-50 mt-2 min-w-[12rem] overflow-hidden rounded-2xl border border-border bg-surface py-1 shadow-lg"
         >
-          {LOCALES.map((item) => {
-            const active = item.id === locale;
+          {MODES.map((item) => {
+            const active = item.id === theme;
+            const Icon = item.icon;
             return (
               <li key={item.id} role="option" aria-selected={active}>
                 <button
                   type="button"
                   onClick={() => {
-                    setLocale(item.id);
+                    setTheme(item.id);
                     setOpen(false);
                   }}
                   className={cn(
                     "flex min-h-11 w-full items-center justify-between gap-3 px-3 text-left text-sm",
                     active ? "bg-primary-tint font-semibold text-primary" : "text-ink hover:bg-surface-warm",
-                    item.eth && "eth",
                   )}
                 >
-                  <span>{item.name}</span>
+                  <span className="inline-flex items-center gap-2">
+                    <Icon size={16} />
+                    {t(item.labelKey)}
+                  </span>
                   {active ? <Check size={16} /> : null}
                 </button>
               </li>

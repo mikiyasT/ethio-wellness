@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --primary: #1c5c3a;
   --primary-hover: #154a2e;
   --primary-dark: #0e3a23;
@@ -21,6 +22,24 @@
   --warning: #9a6b1a;
   --error: #b3261e;
   --info: #2456a6;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #04110b;
+  --surface: rgba(234, 243, 237, 0.14);
+  --surface-warm: rgba(234, 243, 237, 0.08);
+  --border: rgba(234, 243, 237, 0.2);
+  --border-strong: rgba(234, 243, 237, 0.32);
+  --text: #faf6ee;
+  --text-2: #e7dcc6;
+  --text-3: #d6c8a8;
+  --primary-dark: #020805;
+}
+
+[data-theme="dark"] .bg-surface,
+[data-theme="dark"] .bg-surface-warm {
+  backdrop-filter: blur(16px);
 }
 
 @theme inline {
@@ -56,6 +75,7 @@ html,
 body {
   background: var(--bg);
   color: var(--text);
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 a,
@@ -77,6 +97,18 @@ textarea:focus-visible {
 
 .eth {
   font-family: var(--font-ethiopic), var(--font-inter), sans-serif;
+}
+
+.icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .icon-moon {
+  display: block;
 }
 
 .av-1 { background: #1c5c3a; }

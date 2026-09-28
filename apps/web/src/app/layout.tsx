@@ -19,9 +19,14 @@ export const metadata: Metadata = {
   description: "Support for your mind, in the language of your heart.",
 };
 
+const themeInit = `(function(){try{var t=localStorage.getItem("ethio-wellness-theme");if(t==="dark"){document.documentElement.dataset.theme="dark";document.documentElement.style.colorScheme="dark";}}catch(e){}})();`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${ethiopic.variable} h-full antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${ethiopic.variable} h-full antialiased`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
       <body className="min-h-full font-sans">
         <Providers>
           <AppShell>{children}</AppShell>

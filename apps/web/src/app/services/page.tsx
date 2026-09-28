@@ -2,8 +2,9 @@
 
 import { categories, professionals, routes } from "@ethio-wellness/shared";
 import { CategoryCard } from "@/components/domain/category-card";
-import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useLocale } from "@/lib/locale";
+import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export default function ServicesPage() {
@@ -18,28 +19,38 @@ export default function ServicesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      <h1 className="text-4xl font-bold text-ink">{t("services.title")}</h1>
-      <p className="mt-2 text-ink-2">{t("services.sub")}</p>
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="mx-auto max-w-[1200px] px-4 py-12">
+      <h1 className="max-w-3xl text-[32px] font-bold leading-tight text-ink md:text-[40px]">{t("services.title")}</h1>
+      <p className="mt-3 text-ink-2">{t("services.sub")}</p>
+      <label className="relative mt-6 block max-w-xl">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" size={18} />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t("services.search")}
-          className="min-h-[50px] flex-1 rounded-[10px] border border-border bg-surface px-3"
+          className="min-h-[50px] w-full rounded-full border border-border bg-surface pl-10 pr-4"
         />
-        <ButtonLink href={routes.services} variant="text">
-          {t("home.seeAll")}
-        </ButtonLink>
-      </div>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {filtered.map((category) => (
-          <CategoryCard
-            key={category.id}
-            category={category}
-            count={professionals.filter((item) => item.specialties.includes(category.id)).length}
-          />
-        ))}
+      </label>
+      {filtered.length === 0 ? (
+        <div className="mt-8">
+          <EmptyState title={t("pros.emptyTitle")} body={t("pros.emptyBody")} actionHref={routes.services} actionLabel={t("pros.clear")} />
+        </div>
+      ) : (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {filtered.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              count={professionals.filter((item) => item.specialties.includes(category.id)).length}
+            />
+          ))}
+        </div>
+      )}
+      <div className="mt-8 rounded-2xl border border-dashed border-border-strong bg-surface p-8 text-center">
+        <p className="font-semibold text-ink">{t("services.more")}</p>
+        <a href="mailto:hello@ethiowellness.example" className="mt-3 inline-flex min-h-11 items-center text-primary">
+          {t("services.request")}
+        </a>
       </div>
     </div>
   );

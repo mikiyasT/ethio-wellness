@@ -1,39 +1,63 @@
 "use client";
 
 import { LANGUAGES, routes } from "@ethio-wellness/shared";
-import { Chip } from "@/components/ui/chip";
+import { Alert } from "@/components/ui/alert";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { useLocale } from "@/lib/locale";
-import Link from "next/link";
 import { useState } from "react";
 
 export default function AccountSettingsPage() {
-  const { t } = useLocale();
-  const [language, setLanguage] = useState("amharic");
+  const { t, setLocale, locale } = useLocale();
+  const [saved, setSaved] = useState(false);
+  const [language, setLanguage] = useState(locale === "am" ? "amharic" : locale === "ti" ? "tigrinya" : locale === "om" ? "afaan-oromoo" : "english");
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-12">
+    <div className="max-w-[560px]">
       <h1 className="text-3xl font-bold text-ink">{t("account.title")}</h1>
-      <div className="mt-6 space-y-6 rounded-2xl border border-border bg-surface p-6">
-        <div>
-          <p className="font-medium">{t("account.language")}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {LANGUAGES.map((item) => (
-              <Chip key={item.id} selected={language === item.id} onClick={() => setLanguage(item.id)}>
-                {item.nativeLabel}
-              </Chip>
-            ))}
-          </div>
+      <p className="mt-2 text-ink-2">{t("account.sub")}</p>
+      {saved ? (
+        <div className="mt-4">
+          <Alert tone="success">{t("prefs.saved")}</Alert>
         </div>
+      ) : null}
+      <div className="mt-6 space-y-6 rounded-2xl border border-border bg-surface p-6">
+        <label className="block">
+          <span className="font-medium">{t("account.language")}</span>
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+            className="mt-2 min-h-12 w-full rounded-[10px] border border-border bg-surface px-3"
+          >
+            {LANGUAGES.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nativeLabel}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-sm text-ink-3">{t("account.languageHint")}</p>
+        </label>
         <div>
           <p className="font-medium">{t("account.email")}</p>
-          <p className="mt-1 text-ink-2">miki@example.com</p>
+          <input readOnly value="miki@example.com" className="mt-2 min-h-12 w-full rounded-[10px] border border-border bg-surface-warm px-3 text-ink-2" />
+          <p className="mt-2 text-sm text-ink-3">{t("account.emailNote")}</p>
         </div>
-        <Link href={routes.resetPassword} className="inline-flex min-h-11 items-center text-primary">
-          {t("account.changePassword")}
-        </Link>
-        <Link href={routes.home} className="block text-error">
-          {t("account.signOut")}
-        </Link>
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={() => {
+              const map = { amharic: "am", tigrinya: "ti", "afaan-oromoo": "om", english: "en" } as const;
+              setLocale(map[language as keyof typeof map]);
+              setSaved(true);
+            }}
+          >
+            {t("account.save")}
+          </Button>
+          <ButtonLink href={routes.resetPassword} variant="secondary">
+            {t("account.changePassword")}
+          </ButtonLink>
+          <ButtonLink href={routes.home} variant="danger">
+            {t("account.signOut")}
+          </ButtonLink>
+        </div>
       </div>
     </div>
   );
