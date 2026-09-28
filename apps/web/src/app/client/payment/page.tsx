@@ -5,26 +5,37 @@ import { Alert } from "@/components/ui/alert";
 import { TextField } from "@/components/ui/field";
 import { useLocale } from "@/lib/locale";
 import { useRouter } from "next/navigation";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 
 export default function ClientPaymentPage() {
   const { t } = useLocale();
   const router = useRouter();
   const professional = professionals[0];
+  const [state, setState] = useState<"idle" | "processing" | "failed">("idle");
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push(routes.clientBookingConfirmation);
+    const data = new FormData(event.currentTarget);
+    setState("processing");
+    window.setTimeout(() => {
+      if (String(data.get("card")).includes("0000")) {
+        setState("failed");
+        return;
+      }
+      router.push(routes.clientBookingConfirmation);
+    }, 800);
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
+    <div className="max-w-md">
       <h1 className="text-3xl font-bold text-ink">{t("pay.title")}</h1>
       <p className="mt-2 text-ink-2">
         {t("pay.line")} {professional.name}
       </p>
       <div className="mt-4">
-        <Alert tone="info">{t("pay.demo")}</Alert>
+        <Alert tone={state === "failed" ? "error" : "info"}>
+          {state === "failed" ? "Payment failed. Please check your card and try again." : t("pay.demo")}
+        </Alert>
       </div>
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <TextField label={t("pay.card")} name="card" placeholder="4242 4242 4242 4242" />
@@ -33,8 +44,12 @@ export default function ClientPaymentPage() {
           <TextField label={t("pay.cvc")} name="cvc" placeholder="123" />
         </div>
         <TextField label={t("pay.name")} name="name" defaultValue="Miki Teshome" />
-        <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-white">
-          Pay $40
+        <button
+          type="submit"
+          disabled={state === "processing"}
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white disabled:opacity-60"
+        >
+          {state === "processing" ? "Processing…" : "Pay $25"}
         </button>
       </form>
     </div>

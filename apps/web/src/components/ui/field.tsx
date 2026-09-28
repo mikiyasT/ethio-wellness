@@ -17,7 +17,7 @@ export function TextField({
       <span className="text-sm font-medium text-ink">{label}</span>
       <input
         className={cn(
-          "w-full min-h-[50px] rounded-[10px] border bg-surface px-3 text-base text-ink placeholder:text-ink-3",
+          "w-full min-h-[50px] rounded-full border bg-surface px-4 text-base text-ink placeholder:text-ink-3",
           error ? "border-error" : "border-border",
           className,
         )}

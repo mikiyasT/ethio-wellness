@@ -48,8 +48,26 @@ export const professionalNav: { href: string; labelKey: CopyKey }[] = [
   { href: routes.professionalProfile, labelKey: "nav.profile" },
 ];
 
+export const clientSidebar: { href: string; labelKey: CopyKey }[] = [
+  { href: routes.clientHome, labelKey: "nav.home" },
+  { href: routes.services, labelKey: "nav.services" },
+  { href: routes.professionals, labelKey: "nav.professionals" },
+  { href: routes.clientSessions, labelKey: "nav.mySessions" },
+  { href: routes.account, labelKey: "nav.account" },
+];
+
+export const professionalSidebar: { href: string; labelKey: CopyKey }[] = [
+  { href: routes.professionalHome, labelKey: "nav.home" },
+  { href: routes.professionalBookings, labelKey: "nav.bookings" },
+  { href: routes.professionalAvailability, labelKey: "nav.availability" },
+  { href: routes.professionalSpecialties, labelKey: "nav.specialties" },
+  { href: routes.professionalProfile, labelKey: "nav.profile" },
+  { href: routes.account, labelKey: "nav.account" },
+];
+
 export const clientMobileNav: { href: string; labelKey: CopyKey }[] = [
   { href: routes.clientHome, labelKey: "nav.home" },
+  { href: routes.services, labelKey: "nav.services" },
   { href: routes.professionals, labelKey: "nav.professionals" },
   { href: routes.clientSessions, labelKey: "nav.sessions" },
   { href: routes.account, labelKey: "nav.account" },

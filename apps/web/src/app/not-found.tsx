@@ -9,7 +9,8 @@ export default function NotFoundPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-24 text-center">
-      <h1 className="text-4xl font-bold text-ink">{t("notFound.title")}</h1>
+      <p className="text-6xl font-bold text-primary">404</p>
+      <h1 className="mt-4 text-4xl font-bold text-ink">{t("notFound.title")}</h1>
       <p className="mt-3 text-ink-2">{t("notFound.body")}</p>
       <div className="mt-6">
         <ButtonLink href={routes.home}>{t("notFound.cta")}</ButtonLink>
