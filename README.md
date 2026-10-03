@@ -1,6 +1,6 @@
-# Ethio Wellness
+# Ayzon
 
-Monorepo for the Ethio Wellness web app. The UI is scaffolded from `docs/ethio-wellness-ui-spec`.
+Monorepo for the **Ayzon** web app ([ayzoncare.com](https://ayzoncare.com)). The UI is scaffolded from `docs/ethio-wellness-ui-spec`.
 
 ## Apps
 

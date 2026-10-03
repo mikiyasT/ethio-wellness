@@ -1,6 +1,6 @@
 "use client";
 
-import { routes, type AvailabilitySlot, type SlotStatus } from "@ethio-wellness/shared";
+import { routes, type SlotStatus } from "@ethio-wellness/shared";
 import { SlotChip } from "@/components/domain/slot-chip";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -12,32 +12,38 @@ import {
   formatMonthTitle,
   hasOpenSlots,
   hoursForDate,
-  loadAvailabilityDraft,
+  loadSlotsForProfessional,
   parseIsoDate,
-  saveAvailabilityDraft,
   serializeSlots,
   toIsoDate,
-  upsertSlot,
+  upsertLocalSlot,
 } from "@/lib/availability-editor";
-import { submitProfessionalApplication } from "@/lib/professional-approval";
+import type { DbSlot } from "@/lib/db";
+import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { defaultProfessionalStatus } from "@/lib/pro-approval";
 import { useSession } from "@/lib/session";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
-const PRO_ID = "pro-hana-tesfaye";
+type BookedSlotMeta = {
+  clientFirstName: string;
+  payoutLabel: string;
+};
 
 function AvailabilityInner() {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
-  const { setSession, user } = useSession();
+  const { setSession, user, ready, refresh } = useSession();
   const fromOnboarding = search.get("from") === "onboarding";
 
   const todayIso = useMemo(() => toIsoDate(new Date()), []);
-  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
-  const [baselineSlots, setBaselineSlots] = useState<AvailabilitySlot[]>([]);
+  const [proId, setProId] = useState<string | null>(null);
+  const [slots, setSlots] = useState<DbSlot[]>([]);
+  const [baselineSlots, setBaselineSlots] = useState<DbSlot[]>([]);
+  const [bookedMetaBySlotId, setBookedMetaBySlotId] = useState<Record<string, BookedSlotMeta>>({});
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [viewMonth, setViewMonth] = useState(() => {
     const now = new Date();
@@ -48,20 +54,62 @@ function AvailabilityInner() {
   const [info, setInfo] = useState("");
   const [confirmCloseDay, setConfirmCloseDay] = useState(false);
 
-  useEffect(() => {
-    const loaded = loadAvailabilityDraft(PRO_ID);
-    setSlots(loaded);
-    setBaselineSlots(loaded);
-    const firstOpen = loaded.find((slot) => slot.status === "open" && slot.date && slot.date >= todayIso)
-      ?.date;
-    const start = firstOpen ?? todayIso;
-    setSelectedDate(start);
-    setChipStart(start);
-    const d = parseIsoDate(start);
-    setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
-  }, [todayIso]);
+  async function loadBookedMeta(professionalId: string, proSlots: DbSlot[]) {
+    const bookings = await db.bookings.listForProfessional(professionalId);
+    const meta: Record<string, BookedSlotMeta> = {};
+    for (const booking of bookings) {
+      if (booking.status === "cancelled") continue;
+      const slot =
+        proSlots.find((item) => item.id === booking.slotId) ??
+        proSlots.find(
+          (item) =>
+            item.status === "booked" &&
+            booking.dateLabel.toLowerCase().includes(item.timeLabel.toLowerCase().split(" ")[0] ?? ""),
+        );
+      if (!slot || slot.status !== "booked") continue;
+      const client = await db.users.getById(booking.clientId);
+      const firstName = (client?.name ?? "Client").trim().split(/\s+/)[0] || "Client";
+      meta[slot.id] = {
+        clientFirstName: firstName,
+        payoutLabel: `+$${booking.fee}`,
+      };
+    }
+    // Fallback for booked slots without a matched booking row
+    for (const slot of proSlots.filter((item) => item.status === "booked")) {
+      if (meta[slot.id]) continue;
+      meta[slot.id] = {
+        clientFirstName: "Client",
+        payoutLabel: "+$25",
+      };
+    }
+    setBookedMetaBySlotId(meta);
+  }
 
-  const daySlots = useMemo(() => hoursForDate(selectedDate, slots, PRO_ID), [selectedDate, slots]);
+  useEffect(() => {
+    if (!ready || !user.userId) return;
+    void (async () => {
+      const pro =
+        (user.professionalId ? await db.professionals.getById(user.professionalId) : undefined) ??
+        (await db.professionals.getByUserId(user.userId!));
+      if (!pro) return;
+      setProId(pro.id);
+      const loaded = await loadSlotsForProfessional(pro.id);
+      setSlots(loaded);
+      setBaselineSlots(loaded);
+      await loadBookedMeta(pro.id, loaded);
+      const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso;
+      const start = firstOpen ?? todayIso;
+      setSelectedDate(start);
+      setChipStart(start);
+      const d = parseIsoDate(start);
+      setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
+    })();
+  }, [ready, user.userId, user.professionalId, todayIso]);
+
+  const daySlots = useMemo(
+    () => (proId ? hoursForDate(selectedDate, slots, proId) : []),
+    [selectedDate, slots, proId],
+  );
   const openCount = daySlots.filter((slot) => slot.status === "open").length;
   const bookedCount = daySlots.filter((slot) => slot.status === "booked").length;
   const showEmptyHint = openCount === 0 && bookedCount === 0;
@@ -82,16 +130,17 @@ function AvailabilityInner() {
     }
   }
 
-  function toggle(slot: AvailabilitySlot) {
-    if (slot.status === "booked") return;
+  function toggle(slot: DbSlot) {
+    if (slot.status === "booked" || !proId) return;
     const nextStatus: SlotStatus = slot.status === "open" ? "closed" : "open";
-    const next: AvailabilitySlot = {
+    const next: DbSlot = {
       ...slot,
       status: nextStatus,
       dayLabel: formatDayChip(selectedDate),
-      date: selectedDate,
+      dateIso: selectedDate,
+      professionalId: proId,
     };
-    setSlots((current) => upsertSlot(current, next));
+    setSlots((current) => upsertLocalSlot(current, next));
     setSavedMsg(false);
     setInfo("");
     setConfirmCloseDay(false);
@@ -105,22 +154,39 @@ function AvailabilityInner() {
   }
 
   async function performSave() {
+    if (!proId || !user.userId) return;
     const compact = slots.filter((slot) => slot.status === "open" || slot.status === "booked");
-    saveAvailabilityDraft(compact);
-    setSlots(compact);
-    setBaselineSlots(compact);
+    const existing = await loadSlotsForProfessional(proId);
+    const booked = existing.filter((slot) => slot.status === "booked");
+    const bookedKeys = new Set(booked.map((slot) => `${slot.dateIso}|${slot.timeLabel}`));
+    const next = [
+      ...booked,
+      ...compact.filter(
+        (slot) => slot.status === "open" && !bookedKeys.has(`${slot.dateIso}|${slot.timeLabel}`),
+      ),
+    ];
+    await replaceProfessionalSlots(proId, next);
+
+    const reloaded = await loadSlotsForProfessional(proId);
+    setSlots(reloaded);
+    setBaselineSlots(reloaded);
+    await loadBookedMeta(proId, reloaded);
     setSavedMsg(true);
     setInfo("");
     setConfirmCloseDay(false);
 
     if (fromOnboarding) {
-      await submitProfessionalApplication(user.email ?? "new-professional");
+      const status = defaultProfessionalStatus();
+      await db.professionals.update(proId, { status });
       setSession({
         ...user,
         role: "professional",
-        professionalStatus: "pending",
+        professionalId: proId,
+        professionalStatus: status,
       });
-      router.push(routes.professionalPending);
+      await refresh();
+      // TEMP: auto-approve skips /professional/pending
+      router.push(status === "approved" ? routes.professionalHome : routes.professionalPending);
     }
   }
 
@@ -130,15 +196,17 @@ function AvailabilityInner() {
       setSavedMsg(false);
       return;
     }
-
-    const hadOpenBefore = hasOpenSlots(hoursForDate(selectedDate, baselineSlots, PRO_ID));
+    const hadOpenBefore = hasOpenSlots(hoursForDate(selectedDate, baselineSlots, proId ?? ""));
     if (openCount === 0 && hadOpenBefore && !confirmCloseDay) {
       setConfirmCloseDay(true);
       setInfo(t("proAvail.closeDayConfirm"));
       return;
     }
-
     void performSave();
+  }
+
+  if (!proId) {
+    return <div className="p-8 text-ink-2">Loading availability…</div>;
   }
 
   return (
@@ -190,7 +258,7 @@ function AvailabilityInner() {
             const isPast = iso < todayIso;
             const isSelected = iso === selectedDate;
             const isToday = iso === todayIso;
-            const dayHasOpen = hasOpenSlots(hoursForDate(iso, slots, PRO_ID));
+            const dayHasOpen = hasOpenSlots(hoursForDate(iso, slots, proId));
             return (
               <button
                 key={iso}
@@ -268,7 +336,11 @@ function AvailabilityInner() {
           <span className="h-3 w-3 rounded-full border border-border bg-surface" /> {t("proAvail.available")}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full bg-ink-3" /> {t("proAvail.booked")}
+          <span
+            className="h-3 w-3 rounded-full"
+            style={{ background: "linear-gradient(135deg, #F6BE4A 0%, #E8833A 100%)" }}
+          />{" "}
+          {t("proAvail.booked")}
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-primary" /> {t("proAvail.selected")}
@@ -282,23 +354,24 @@ function AvailabilityInner() {
         </div>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {daySlots.map((slot) => (
-          <SlotChip
-            key={slot.id}
-            label={slot.timeLabel}
-            sublabel={
-              slot.status === "booked"
-                ? t("proAvail.booked")
-                : slot.status === "open"
-                  ? t("proAvail.openLabel")
-                  : undefined
-            }
-            status={slot.status}
-            selected={slot.status === "open"}
-            onClick={() => toggle(slot)}
-          />
-        ))}
+      <div className="mt-4 grid grid-cols-3 items-stretch gap-2 sm:grid-cols-4">
+        {daySlots.map((slot) => {
+          const bookedMeta = slot.status === "booked" ? bookedMetaBySlotId[slot.id] : undefined;
+          return (
+            <SlotChip
+              key={slot.id}
+              label={slot.timeLabel}
+              sublabel={slot.status === "open" ? t("proAvail.openLabel") : undefined}
+              status={slot.status}
+              selected={slot.status === "open"}
+              onClick={slot.status === "booked" ? undefined : () => toggle(slot)}
+              bookedClientFirstName={
+                slot.status === "booked" ? (bookedMeta?.clientFirstName ?? "Client") : undefined
+              }
+              bookedPayout={slot.status === "booked" ? (bookedMeta?.payoutLabel ?? "+$25") : undefined}
+            />
+          );
+        })}
       </div>
 
       <div className="mt-6">
@@ -340,6 +413,10 @@ function AvailabilityInner() {
       </div>
     </div>
   );
+}
+
+async function replaceProfessionalSlots(professionalId: string, next: DbSlot[]) {
+  await db.slots.replaceForProfessional(professionalId, next);
 }
 
 export default function ProfessionalAvailabilityPage() {

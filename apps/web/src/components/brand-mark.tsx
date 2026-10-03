@@ -11,7 +11,7 @@ export function BrandMark({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       )}
       aria-hidden
     >
-      EW
+      AZ
     </span>
   );
 }

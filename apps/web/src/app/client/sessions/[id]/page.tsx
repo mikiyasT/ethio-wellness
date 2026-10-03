@@ -1,22 +1,42 @@
 "use client";
 
-import { bookings, categoryById, professionalById, routes } from "@ethio-wellness/shared";
+import { categoryById, routes } from "@ethio-wellness/shared";
 import { Avatar } from "@/components/ui/avatar";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import { db, formatFeeExact, type DbBooking, type DbProfessional } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ClientSessionDetailPage() {
   const { t } = useLocale();
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const booking = bookings.find((item) => item.id === params.id);
-  const professional = booking ? professionalById(booking.professionalId) : undefined;
+  const { user, ready } = useSession();
+  const [booking, setBooking] = useState<DbBooking | null | undefined>(undefined);
+  const [professional, setProfessional] = useState<DbProfessional | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+
+  useEffect(() => {
+    if (!ready) return;
+    void (async () => {
+      const found = await db.bookings.getById(params.id);
+      if (!found || (user.userId && found.clientId !== user.userId)) {
+        setBooking(null);
+        return;
+      }
+      setBooking(found);
+      setProfessional((await db.professionals.getById(found.professionalId)) ?? null);
+    })();
+  }, [ready, params.id, user.userId]);
+
+  if (booking === undefined) {
+    return <div className="p-8 text-ink-2">Loading…</div>;
+  }
 
   if (!booking || !professional) {
     return (
@@ -31,7 +51,12 @@ export default function ClientSessionDetailPage() {
     );
   }
 
-  const ready = booking.linkState === "ready";
+  const readyLink = booking.linkState === "ready";
+
+  async function onCancel() {
+    await db.bookings.cancel(booking!.id, "client");
+    router.push(`${routes.clientSessions}?tab=cancelled`);
+  }
 
   return (
     <div className="mx-auto max-w-xl">
@@ -65,7 +90,7 @@ export default function ClientSessionDetailPage() {
         </div>
         <div>
           <dt className="text-sm text-ink-3">{t("session.fee")}</dt>
-          <dd>$25.00</dd>
+          <dd>{formatFeeExact(booking.fee)}</dd>
         </div>
         <div>
           <dt className="text-sm text-ink-3">{t("session.format")}</dt>
@@ -78,9 +103,9 @@ export default function ClientSessionDetailPage() {
       </dl>
 
       <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
-        <p className="text-sm text-ink-2">{ready ? t("session.videoReady") : t("session.videoPending")}</p>
+        <p className="text-sm text-ink-2">{readyLink ? t("session.videoReady") : t("session.videoPending")}</p>
         <div className="mt-3">
-          <Button disabled={!ready} block>
+          <Button disabled={!readyLink} block>
             {t("sessions.join")}
           </Button>
         </div>
@@ -91,31 +116,33 @@ export default function ClientSessionDetailPage() {
           {t("session.reschedule")}
         </Button>
         <p className="text-sm text-ink-3">{t("session.rescheduleNote")}</p>
-        {!confirmCancel ? (
-          <button
-            type="button"
-            className="text-sm font-semibold text-error hover:underline"
-            onClick={() => setConfirmCancel(true)}
-          >
-            {t("session.cancel")}
-          </button>
-        ) : (
-          <div className="space-y-3">
-            <Alert tone="warning">{t("session.cancelConfirm")}</Alert>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                variant="danger"
-                className="bg-error text-white hover:opacity-90"
-                onClick={() => router.push(`${routes.clientSessions}?tab=cancelled`)}
-              >
-                {t("session.cancelYes")}
-              </Button>
-              <Button variant="secondary" onClick={() => setConfirmCancel(false)}>
-                {t("session.cancelKeep")}
-              </Button>
+        {booking.status !== "cancelled" ? (
+          !confirmCancel ? (
+            <button
+              type="button"
+              className="text-sm font-semibold text-error hover:underline"
+              onClick={() => setConfirmCancel(true)}
+            >
+              {t("session.cancel")}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <Alert tone="warning">{t("session.cancelConfirm")}</Alert>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="danger"
+                  className="bg-error text-white hover:opacity-90"
+                  onClick={() => void onCancel()}
+                >
+                  {t("session.cancelYes")}
+                </Button>
+                <Button variant="secondary" onClick={() => setConfirmCancel(false)}>
+                  {t("session.cancelKeep")}
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )
+        ) : null}
       </div>
     </div>
   );

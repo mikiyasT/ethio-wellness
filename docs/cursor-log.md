@@ -37,3 +37,33 @@ Entries after each pushed work session. Buddy reviews against `docs/ethio-wellne
 - Rebuilt `/professional/availability` with month **calendar date picker**, scrollable **day chips**, and a full **1-hour slot grid** (9 AM–8 PM).
 - Tap toggles open ↔ closed; booked stays locked; empty-date hint; save validations (`No changes` / close-day confirm).
 - Persist to localStorage; reachable from pro dashboard, sidebar, profile, and onboarding step 3.
+
+### 2026-09-28 — Temporary client-side data layer (`db.ts`)
+
+- Added `apps/web/src/lib/db.ts` as the **only** localStorage module (`ethio-wellness-db-v1`): users, professionals, slots, bookings + sessionUserId/theme. All APIs are **async**.
+- Seeded from `sample-data.ts` (10 pros, Hana slots, Abel bookings). Limitation: **per-browser only**.
+- Migrated session, theme FOUC script, pro profile/draft, availability, login/register, book/pay/cancel, client sessions, and pro dashboard onto `db.*`.
+- Fees come from each professional’s `fee` (not hardcoded $25). Booking validates `slot.professionalId === professional.id`.
+- App-shell guest `?next=` now includes `window.location.search` so `?pro=&slot=` survives login.
+- Pro onboarding defaults are blank (name from registration), not Hana prefill.
+
+### 2026-09-29 — Demo logins (test client / test provider)
+
+- Seeded **Test Client** (`user-test-client`) and **Test Provider** (`pro-test-provider`, approved) with sample bookings/slots; `ensureDemoAccounts` injects them into existing stores.
+- Login: type `test client` / `test provider` (or tap demo buttons) — **no password**. Routes to `/client` or `/professional`.
+- Account shows signed-in name/role; Sign out clears session. Header avatar uses session initials.
+- App-shell: guests blocked from client + pro areas; role mismatch redirects to the correct home.
+
+### 2026-09-30 — Rebrand to Ayzon (ayzoncare.com)
+
+- Product brand **Ethio Wellness** → **Ayzon**; mark **EW** → **AZ**; domain **ayzoncare.com** (e.g. `hello@ayzoncare.com`).
+- Updated shared copy, page metadata, README, API health/log strings, and UI-spec docs.
+- localStorage key → `ayzon-db-v1` (migrates from `ethio-wellness-db-v1`).
+- Left npm package scope `@ethio-wellness/*` and folder `docs/ethio-wellness-ui-spec` unchanged (internal paths only).
+
+### 2026-10-02 — TEMP auto-approve professionals
+
+- `AUTO_APPROVE_PROFESSIONALS = true` in `apps/web/src/lib/pro-approval.ts`.
+- New pros default to **approved**; onboarding finish → dashboard (skips pending).
+- Existing pending pros flipped to approved on store read; client browse lists include them.
+- Set the flag to `false` to restore manual review.

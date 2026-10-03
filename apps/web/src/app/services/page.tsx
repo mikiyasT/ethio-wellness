@@ -48,7 +48,7 @@ export default function ServicesPage() {
       )}
       <div className="mt-8 rounded-2xl border border-dashed border-border-strong bg-surface p-8 text-center">
         <p className="font-semibold text-ink">{t("services.more")}</p>
-        <a href="mailto:hello@ethiowellness.example" className="mt-3 inline-flex min-h-11 items-center text-primary">
+        <a href="mailto:hello@ayzoncare.com" className="mt-3 inline-flex min-h-11 items-center text-primary">
           {t("services.request")}
         </a>
       </div>

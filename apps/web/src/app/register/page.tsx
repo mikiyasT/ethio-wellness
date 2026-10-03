@@ -18,8 +18,8 @@ function RegisterInner() {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const name = String(data.get("name") ?? "");
-    const email = String(data.get("email") ?? "");
+    const name = String(data.get("name") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
     const next: Record<string, string> = {};
     if (!name) next.name = "Enter your full name";
@@ -31,10 +31,9 @@ function RegisterInner() {
     const held = search.get("next");
     const params = new URLSearchParams();
     if (held) params.set("next", held);
-    if (name) params.set("name", name);
-    if (email) params.set("email", email);
-    const qs = params.toString();
-    router.push(qs ? `${routes.roleSelection}?${qs}` : routes.roleSelection);
+    params.set("name", name);
+    params.set("email", email.toLowerCase());
+    router.push(`${routes.roleSelection}?${params.toString()}`);
   }
 
   const next = search.get("next");

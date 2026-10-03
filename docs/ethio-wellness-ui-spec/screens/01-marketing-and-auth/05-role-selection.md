@@ -1,7 +1,7 @@
 # Role selection — `role-selection`
 
 ## Purpose
-New accounts pick how they'll use Ethio Wellness — as a client booking sessions or as a professional offering them — so the right onboarding follows.
+New accounts pick how they'll use Ayzon — as a client booking sessions or as a professional offering them — so the right onboarding follows.
 
 ## Who can see it
 Newly registered users immediately after signup (authenticated but not yet assigned a role). Guests cannot reach it.
@@ -12,7 +12,7 @@ Newly registered users immediately after signup (authenticated but not yet assig
 3. Footer (`.site-footer`)
 
 ## Visible UI elements
-- H1 "How will you use Ethio Wellness?"
+- H1 "How will you use Ayzon?"
 - Sub "Pick the one that fits you — you can adjust later in settings."
 - **Client card:** 🧍 icon circle, "Client", "Book sessions with counselors"
 - **Professional card:** 🩺 icon circle, "Professional", "Offer counseling and manage your practice"

@@ -1,7 +1,7 @@
 # Login — `login`
 
 ## Purpose
-Lets returning users sign back in to their Ethio Wellness account.
+Lets returning users sign back in to their Ayzon account.
 
 ## Who can see it
 Guests (signed-out visitors). Reaching it while already signed in should bounce to the appropriate home screen.
@@ -12,7 +12,7 @@ Guests (signed-out visitors). Reaching it while already signed in should bounce 
 3. Footer (`.site-footer`, 4 columns + base row)
 
 ## Visible UI elements
-- Brand mark "EW" (52px, centered)
+- Brand mark "AZ" (52px, centered)
 - H1 "Welcome back"
 - Sub "Sign in to continue your wellness journey."
 - Field: Email (`you@example.com` placeholder)

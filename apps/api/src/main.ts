@@ -4,5 +4,5 @@ import { env } from "./config/env.js";
 const app = createApp();
 
 app.listen(env.port, () => {
-  console.log(`Ethio Wellness API listening on http://localhost:${env.port}`);
+  console.log(`Ayzon API listening on http://localhost:${env.port}`);
 });

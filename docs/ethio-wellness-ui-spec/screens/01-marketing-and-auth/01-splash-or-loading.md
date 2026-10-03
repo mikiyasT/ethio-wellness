@@ -8,14 +8,14 @@ All visitors (first load, before any header, footer, or navigation is available)
 
 ## Layout regions
 Single full-viewport layer (`.load-veil`): no header, no footer, no navigation.
-1. Brand mark (large "EW" circle, 72px)
-2. Title block: "Ethio Wellness" heading + Amharic tagline (`.eth`)
+1. Brand mark (large "AZ" circle, 72px)
+2. Title block: "Ayzon" heading + Amharic tagline (`.eth`)
 3. Animated loading bar (`.load-bar`)
 4. Small caption line
 
 ## Visible UI elements
-- Brand mark "EW" (large, animated-pulse-free, centered)
-- H1 "Ethio Wellness"
+- Brand mark "AZ" (large, animated-pulse-free, centered)
+- H1 "Ayzon"
 - Tagline "በቋንቋዎ የሚሰጥ የስነ-ልቦና ድጋፍ።" (Ethiopic font)
 - Animated loading bar (brand-green bar sweeping across a track)
 - Caption "Warming up your space…"

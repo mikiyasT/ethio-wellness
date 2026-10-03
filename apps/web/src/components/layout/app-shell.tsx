@@ -2,6 +2,7 @@
 
 import { routes } from "@ethio-wellness/shared";
 import { useSession } from "@/lib/session";
+import { AUTO_APPROVE_PROFESSIONALS } from "@/lib/pro-approval";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { BottomNav } from "./bottom-nav";
@@ -30,11 +31,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    if (isClientArea && role === "guest") {
-      router.replace(`${routes.login}?next=${encodeURIComponent(pathname)}`);
+    if ((isClientArea || isProArea) && role === "guest") {
+      // Don't bounce login back to Account — dashboards are the post-login home.
+      if (pathname === routes.account || pathname.startsWith(`${routes.account}/`)) {
+        router.replace(routes.login);
+        return;
+      }
+      const next = `${window.location.pathname}${window.location.search}`;
+      router.replace(`${routes.login}?next=${encodeURIComponent(next)}`);
+      return;
+    }
+    if (isClientArea && role === "professional" && pathname.startsWith("/client")) {
+      router.replace(routes.professionalHome);
+      return;
+    }
+    if (isProArea && role === "client" && !isProOnboardingFlow) {
+      router.replace(routes.clientHome);
       return;
     }
     if (
+      !AUTO_APPROVE_PROFESSIONALS &&
       role === "professional" &&
       user.professionalStatus === "pending" &&
       isProArea &&
@@ -49,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const chromeRole = role !== "guest" ? role : "guest";
   const showSidebar = chromeRole !== "guest" && !pathname.startsWith("/professional/pending");
 
-  if (isClientArea && (!ready || role === "guest")) {
+  if ((isClientArea || isProArea) && (!ready || role === "guest")) {
     return (
       <div className="flex min-h-full flex-col">
         <Header role="guest" />

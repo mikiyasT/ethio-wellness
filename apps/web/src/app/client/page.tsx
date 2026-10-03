@@ -1,21 +1,43 @@
 "use client";
 
-import { bookings, categoryById, professionalById, professionals, routes } from "@ethio-wellness/shared";
+import { categoryById, routes, type Professional } from "@ethio-wellness/shared";
 import { CategoryCard } from "@/components/domain/category-card";
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { SessionCard } from "@/components/domain/session-card";
 import { ButtonLink } from "@/components/ui/button";
+import { db, toCardProfessional, type DbBooking } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
+import { useEffect, useState } from "react";
 
 export default function ClientHomePage() {
   const { t } = useLocale();
-  const next = bookings.find((booking) => booking.status === "upcoming");
-  const professional = next ? professionalById(next.professionalId) : undefined;
+  const { user, ready } = useSession();
+  const [next, setNext] = useState<DbBooking | null>(null);
+  const [professional, setProfessional] = useState<Professional | null>(null);
+  const [recommended, setRecommended] = useState<Professional[]>([]);
   const shortcuts = ["individual-mental-health", "grief-and-loss", "career-and-life-stress", "youth-and-students"] as const;
+
+  useEffect(() => {
+    if (!ready || !user.userId) return;
+    void (async () => {
+      const bookings = await db.bookings.listForClient(user.userId!);
+      const upcoming = bookings.find((booking) => booking.status === "upcoming") ?? null;
+      setNext(upcoming);
+      if (upcoming) {
+        const pro = await db.professionals.getById(upcoming.professionalId);
+        if (pro) setProfessional(toCardProfessional(pro));
+      }
+      const approved = await db.professionals.list({ status: "approved" });
+      setRecommended(approved.slice(4, 6).map((pro) => toCardProfessional(pro)));
+    })();
+  }, [ready, user.userId]);
 
   return (
     <div>
-      <h1 className="text-[32px] font-bold text-ink md:text-[40px]">{t("clientHome.hello")}</h1>
+      <h1 className="text-[32px] font-bold text-ink md:text-[40px]">
+        {user.name ? `Selam, ${user.name} 👋` : t("clientHome.hello")}
+      </h1>
       <p className="mt-2 text-ink-2">{t("clientHome.sub")}</p>
 
       {next && professional ? (
@@ -58,7 +80,7 @@ export default function ClientHomePage() {
           </ButtonLink>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {professionals.slice(4, 6).map((item) => (
+          {recommended.map((item) => (
             <ProfessionalCard key={item.id} professional={item} />
           ))}
         </div>

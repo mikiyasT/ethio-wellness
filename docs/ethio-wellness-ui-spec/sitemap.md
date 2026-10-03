@@ -1,4 +1,4 @@
-# Sitemap — Ethio Wellness Information Architecture
+# Sitemap — Ayzon Information Architecture
 
 ## The three nav systems
 

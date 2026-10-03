@@ -1,7 +1,7 @@
 import type { Locale } from "./types";
 
 export const en = {
-  brand: "Ethio Wellness",
+  brand: "Ayzon",
   "nav.home": "Home",
   "nav.services": "Services",
   "nav.professionals": "Professionals",
@@ -19,7 +19,7 @@ export const en = {
   "chrome.bright": "Bright",
   "chrome.night": "Night",
   "footer.about":
-    "Ethio Wellness connects you with licensed Ethiopian counselors and wellness professionals, in the language you think in.",
+    "Ayzon connects you with licensed Ethiopian counselors and wellness professionals, in the language you think in.",
   "footer.explore": "Explore",
   "footer.support": "Support",
   "footer.legal": "Legal",
@@ -27,12 +27,12 @@ export const en = {
   "footer.contact": "Contact",
   "footer.privacy": "Privacy",
   "footer.terms": "Terms",
-  "footer.base": "© 2026 Ethio Wellness · Made with care in Addis Ababa",
+  "footer.base": "© 2026 Ayzon · ayzoncare.com · Made with care in Addis Ababa",
   "splash.tagline": "Support for your mind, in the language of your heart.",
   "home.kicker": "Counseling in your language",
   "home.h1": "Support for your mind, in the language of your heart.",
   "home.sub":
-    "Ethio Wellness connects you with Ethiopian counselors and wellness professionals — in Amharic, Tigrinya, Afaan Oromoo, and English. Browse freely, book when you're ready.",
+    "Ayzon connects you with Ethiopian counselors and wellness professionals — in Amharic, Tigrinya, Afaan Oromoo, and English. Browse freely, book when you're ready.",
   "home.ctaProfessionals": "Browse professionals",
   "home.ctaServices": "Explore services",
   "home.trust1": "Licensed Ethiopian professionals",
@@ -71,7 +71,7 @@ export const en = {
   "register.submit": "Create account",
   "register.terms": "By creating an account you agree to the Terms and Privacy policy.",
   "register.hasAccount": "Already have an account? Sign in",
-  "role.title": "How will you use Ethio Wellness?",
+  "role.title": "How will you use Ayzon?",
   "role.clientTitle": "I'm looking for support",
   "role.clientBody": "Browse counselors and book sessions.",
   "role.proTitle": "I'm a professional",
@@ -237,7 +237,7 @@ export const en = {
   "proProfile.preview": "Public preview",
   "proAvail.closed": "Closed",
   "proAvail.selected": "Selected",
-  "proAvail.openLabel": "Open",
+  "proAvail.openLabel": "Available",
   "proAvail.slotsFor": "1-hour slots for",
   "proAvail.save": "Save availability",
   "proAvail.saved": "Availability saved.",
@@ -287,7 +287,7 @@ export const en = {
   "proAvail.note": "Booked slots can't be removed — contact support to change a confirmed session.",
   "proBookings.title": "Bookings",
   "account.title": "Account settings",
-  "account.sub": "Manage how Ethio Wellness looks and works for you.",
+  "account.sub": "Manage how Ayzon looks and works for you.",
   "account.languageHint":
     "Buttons and menus will use this language. A counselor's profile always shows the languages they work in.",
   "account.emailNote":

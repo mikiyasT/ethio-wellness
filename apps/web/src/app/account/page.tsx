@@ -27,6 +27,11 @@ export default function AccountSettingsPage() {
         </div>
       ) : null}
       <div className="mt-6 space-y-6 rounded-2xl border border-border bg-surface p-6">
+        <div>
+          <p className="font-medium">Signed in as</p>
+          <p className="mt-1 text-ink">{user.name ?? "Member"}</p>
+          <p className="text-sm capitalize text-ink-3">{user.role}</p>
+        </div>
         <label className="block">
           <span className="font-medium">{t("account.language")}</span>
           <select
@@ -51,7 +56,7 @@ export default function AccountSettingsPage() {
           <p className="font-medium">{t("account.email")}</p>
           <input
             readOnly
-            value={user.email ?? "abel@example.com"}
+            value={user.email ?? ""}
             className="mt-2 min-h-12 w-full rounded-[10px] border border-border bg-surface-warm px-3 text-ink-2"
           />
           <p className="mt-2 text-sm text-ink-3">{t("account.emailNote")}</p>

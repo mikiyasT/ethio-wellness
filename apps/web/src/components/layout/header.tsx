@@ -11,6 +11,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,13 +19,30 @@ import { useState } from "react";
 import { LanguageSwitcher } from "./language-switcher";
 import { ModeSwitcher } from "./mode-switcher";
 
+function initialsFromName(name?: string, role?: UserRole) {
+  if (name?.trim()) {
+    return (
+      name
+        .trim()
+        .split(/\s+/)
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "?"
+    );
+  }
+  return role === "professional" ? "PR" : "ME";
+}
+
 export function Header({ role }: { role: UserRole }) {
   const { t } = useLocale();
+  const { user } = useSession();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const nav = role === "client" ? clientNav : role === "professional" ? professionalNav : guestNav;
   const homeHref =
     role === "client" ? routes.clientHome : role === "professional" ? routes.professionalHome : routes.home;
+  const avatarInitials = initialsFromName(user.name, role);
 
   function isActive(href: string) {
     if (href === routes.home || href === routes.clientHome || href === routes.professionalHome) {
@@ -79,8 +97,14 @@ export function Header({ role }: { role: UserRole }) {
               </button>
             </>
           ) : (
-            <ButtonLink href={routes.account} variant="secondary" size="sm" className="keep-round h-10 w-10 !px-0">
-              {role === "professional" ? "HT" : "AD"}
+            <ButtonLink
+              href={routes.account}
+              variant="secondary"
+              size="sm"
+              className="keep-round h-10 w-10 !px-0"
+              aria-label={user.name ? `Account for ${user.name}` : "Account"}
+            >
+              {avatarInitials}
             </ButtonLink>
           )}
         </div>

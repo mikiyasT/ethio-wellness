@@ -1,7 +1,14 @@
 import type { CategoryId, LanguageId } from "@ethio-wellness/shared";
+import { db, type DbProfessional } from "@/lib/db";
 
-export const PRO_DRAFT_KEY = "ethio-wellness-pro-draft";
-export const PRO_AVAIL_KEY = "ethio-wellness-pro-availability";
+export const CITIES = [
+  "Addis Ababa",
+  "Mekelle",
+  "Adama",
+  "Hawassa",
+  "Bahir Dar",
+  "Diaspora",
+] as const;
 
 export interface ProDraft {
   name: string;
@@ -14,37 +21,48 @@ export interface ProDraft {
   specialties: CategoryId[];
 }
 
-export const CITIES = [
-  "Addis Ababa",
-  "Mekelle",
-  "Adama",
-  "Hawassa",
-  "Bahir Dar",
-  "Diaspora",
-] as const;
-
-export const defaultProDraft = (): ProDraft => ({
-  name: "Hana Tesfaye",
-  title: "Clinical Psychologist",
+/** Blank defaults — name comes from registration, not Hana. */
+export const emptyProDraft = (name = ""): ProDraft => ({
+  name,
+  title: "",
   city: "Addis Ababa",
   credentials: "",
   bio: "",
   practiceMore: "",
-  languages: ["amharic", "english"],
-  specialties: ["individual-mental-health"],
+  languages: [],
+  specialties: [],
 });
 
-export function loadProDraft(): ProDraft {
-  if (typeof window === "undefined") return defaultProDraft();
-  try {
-    const raw = window.localStorage.getItem(PRO_DRAFT_KEY);
-    if (!raw) return defaultProDraft();
-    return { ...defaultProDraft(), ...(JSON.parse(raw) as Partial<ProDraft>) };
-  } catch {
-    return defaultProDraft();
-  }
+export function draftFromProfessional(pro: DbProfessional): ProDraft {
+  return {
+    name: pro.name,
+    title: pro.title,
+    city: pro.city || "Addis Ababa",
+    credentials: pro.credentials,
+    bio: pro.bio,
+    practiceMore: pro.practiceMore,
+    languages: [...pro.languages],
+    specialties: [...pro.specialties],
+  };
 }
 
-export function saveProDraft(draft: ProDraft) {
-  window.localStorage.setItem(PRO_DRAFT_KEY, JSON.stringify(draft));
+export async function loadProDraftForUser(userId: string, fallbackName = ""): Promise<ProDraft> {
+  const pro = await db.professionals.getByUserId(userId);
+  if (!pro) return emptyProDraft(fallbackName);
+  return draftFromProfessional(pro);
+}
+
+export async function saveProDraftForUser(userId: string, draft: ProDraft): Promise<DbProfessional | undefined> {
+  const pro = await db.professionals.getByUserId(userId);
+  if (!pro) return undefined;
+  return db.professionals.update(pro.id, {
+    name: draft.name,
+    title: draft.title,
+    city: draft.city,
+    credentials: draft.credentials,
+    bio: draft.bio,
+    practiceMore: draft.practiceMore,
+    languages: draft.languages,
+    specialties: draft.specialties,
+  });
 }
