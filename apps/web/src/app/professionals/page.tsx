@@ -3,16 +3,17 @@
 import {
   LANGUAGES,
   categories,
-  professionals,
   type CategoryId,
   type LanguageId,
+  type Professional,
 } from "@ethio-wellness/shared";
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { db, toCardProfessional } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function ProfessionalsPage() {
@@ -27,6 +28,7 @@ function ProfessionalsDirectory() {
   const { t } = useLocale();
   const searchParams = useSearchParams();
   const preset = searchParams.get("specialty") as CategoryId | null;
+  const [directory, setDirectory] = useState<Professional[]>([]);
   const [query, setQuery] = useState("");
   const [languages, setLanguages] = useState<LanguageId[]>([]);
   const [specialties, setSpecialties] = useState<CategoryId[]>(preset ? [preset] : []);
@@ -34,8 +36,26 @@ function ProfessionalsDirectory() {
   const [sort, setSort] = useState("soonest");
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  useEffect(() => {
+    void (async () => {
+      const approved = await db.professionals.list({ status: "approved" });
+      const cards: Professional[] = [];
+      for (const pro of approved) {
+        const slots = await db.slots.listForProfessional(pro.id);
+        const nextOpen = slots.find((slot) => slot.status === "open");
+        cards.push(
+          toCardProfessional(
+            pro,
+            nextOpen ? `${nextOpen.dayLabel} ${nextOpen.timeLabel}` : "Check availability",
+          ),
+        );
+      }
+      setDirectory(cards);
+    })();
+  }, []);
+
   const results = useMemo(() => {
-    const filtered = professionals.filter((professional) => {
+    const filtered = directory.filter((professional) => {
       const matchesName = professional.name.toLowerCase().includes(query.toLowerCase());
       const matchesLanguage =
         languages.length === 0 || languages.some((language) => professional.languages.includes(language));
@@ -48,7 +68,7 @@ function ProfessionalsDirectory() {
       return matchesName && matchesLanguage && matchesSpecialty && matchesAvailability;
     });
     return [...filtered].sort((a, b) => (sort === "highest" ? b.rating - a.rating : 0));
-  }, [query, languages, specialties, availability, sort]);
+  }, [directory, query, languages, specialties, availability, sort]);
 
   function toggleLanguage(id: LanguageId) {
     setLanguages((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));

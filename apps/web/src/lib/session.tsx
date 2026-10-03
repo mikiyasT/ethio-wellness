@@ -1,12 +1,15 @@
 "use client";
 
 import type { UserRole } from "@ethio-wellness/shared";
+import { db, type DbUser } from "@/lib/db";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface SessionUser {
+  userId?: string;
   role: UserRole;
   name?: string;
   email?: string;
+  professionalId?: string;
   /** Professional applications need manual approval before dashboard access. */
   professionalStatus?: "pending" | "approved";
 }
@@ -15,51 +18,75 @@ interface SessionContextValue {
   user: SessionUser;
   role: UserRole;
   setSession: (user: SessionUser) => void;
+  setSessionFromUser: (dbUser: DbUser) => Promise<void>;
   signOut: () => void;
   ready: boolean;
+  refresh: () => Promise<void>;
 }
 
-const STORAGE_KEY = "ethio-wellness-session";
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 const guest: SessionUser = { role: "guest" };
 
-function readStored(): SessionUser {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return guest;
-    const parsed = JSON.parse(raw) as SessionUser;
-    if (parsed?.role === "client" || parsed?.role === "professional" || parsed?.role === "guest") {
-      return parsed;
-    }
-  } catch {
-    /* ignore */
+async function resolveSession(userId: string | null): Promise<SessionUser> {
+  if (!userId) return guest;
+  const dbUser = await db.users.getById(userId);
+  if (!dbUser) return guest;
+  if (dbUser.role === "professional") {
+    const pro = dbUser.professionalId
+      ? await db.professionals.getById(dbUser.professionalId)
+      : await db.professionals.getByUserId(dbUser.id);
+    return {
+      userId: dbUser.id,
+      role: "professional",
+      name: dbUser.name,
+      email: dbUser.email,
+      professionalId: pro?.id ?? dbUser.professionalId,
+      professionalStatus: pro?.status ?? "pending",
+    };
   }
-  return guest;
+  return {
+    userId: dbUser.id,
+    role: "client",
+    name: dbUser.name,
+    email: dbUser.email,
+  };
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser>(guest);
   const [ready, setReady] = useState(false);
 
+  const refresh = useCallback(async () => {
+    const userId = await db.session.getUserId();
+    setUser(await resolveSession(userId));
+  }, []);
+
   useEffect(() => {
-    setUser(readStored());
-    setReady(true);
+    void (async () => {
+      await refresh();
+      setReady(true);
+    })();
+  }, [refresh]);
+
+  const setSessionFromUser = useCallback(async (dbUser: DbUser) => {
+    await db.session.setUserId(dbUser.id);
+    setUser(await resolveSession(dbUser.id));
   }, []);
 
   const setSession = useCallback((next: SessionUser) => {
     setUser(next);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    void db.session.setUserId(next.userId ?? null);
   }, []);
 
   const signOut = useCallback(() => {
     setUser(guest);
-    window.localStorage.removeItem(STORAGE_KEY);
+    void db.session.clear();
   }, []);
 
   const value = useMemo(
-    () => ({ user, role: user.role, setSession, signOut, ready }),
-    [user, setSession, signOut, ready],
+    () => ({ user, role: user.role, setSession, setSessionFromUser, signOut, ready, refresh }),
+    [user, setSession, setSessionFromUser, signOut, ready, refresh],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

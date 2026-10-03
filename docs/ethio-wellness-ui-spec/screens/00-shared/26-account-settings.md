@@ -10,7 +10,7 @@ Signed-in clients and professionals (shown here with the client header).
 Top bar (client nav + avatar) → app sidebar (Account active) → narrow settings card → footer. Mobile: top bar + centered card + bottom nav (Account active).
 
 ## Visible UI elements
-- Page title "Account settings" with subheading "Manage how Ethio Wellness looks and works for you."
+- Page title "Account settings" with subheading "Manage how Ayzon looks and works for you."
 - "Preferred app language" dropdown (English / አማርኛ / ትግርኛ / Afaan Oromoo) with hint: "Buttons and menus will use this language. A counselor's profile always shows the languages they work in."
 - Read-only "Email address" field showing the account email, with note "Email can't be changed in v1. If you need a new address, contact support and we'll help."
 - "Save changes" (primary), "Change password" (secondary), "Sign out" (danger text).

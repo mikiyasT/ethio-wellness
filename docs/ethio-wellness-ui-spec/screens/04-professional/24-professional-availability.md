@@ -20,7 +20,7 @@
 ## Visible UI elements
 
 - Day chips (Sat Oct 3 through Wed Oct 7), one active at a time.
-- Slot buttons with time + sublabel ("Open"/"Booked"); booked slots are struck through, dashed, and disabled.
+- Slot buttons with time + sublabel ("Available"/"Booked"); booked slots use an amber gradient card (no strikethrough) with client first name and payout; they are not tappable.
 - Legend swatches: Available, Booked, Selected.
 - "Save availability" button.
 - Warning note about booked slots and support.

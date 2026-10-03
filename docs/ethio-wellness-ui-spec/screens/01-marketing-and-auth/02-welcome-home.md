@@ -1,6 +1,6 @@
 # Welcome home (`welcome-home`)
 
-- **Purpose:** Public landing page that explains Ethio Wellness in a warm, local way and invites guests to start browsing immediately.
+- **Purpose:** Public landing page that explains Ayzon in a warm, local way and invites guests to start browsing immediately.
 - **Who can see it:** All (guest, client, professional). Logged-in clients may land here or go to `client-home` — both are documented.
 - **Layout regions:** Guest header (sticky) · hero band · main (how-it-works, featured categories, language strip, featured professionals, CTA band) · footer.
 - **Visible UI elements:** Brand + nav (Home, Services, Professionals) + language switcher (EN/አማ/ትግርኛ/Afaan Oromoo) + Sign in + Create account; hero kicker, headline, Amharic sub-headline, lead paragraph, two CTAs, three trust badges; three how-it-works cards; four category cards + "See all categories"; language strip with four language chips + "+ more coming"; three professional cards (photo-initials avatar, name, title, city, rating, language tags, specialties, next-open slot, View profile); closing CTA band; footer.

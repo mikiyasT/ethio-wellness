@@ -1,21 +1,49 @@
 "use client";
 
-import { bookingsForStatus, categoryById, professionalById, routes } from "@ethio-wellness/shared";
+import { categoryById, routes } from "@ethio-wellness/shared";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
+import { db, type DbBooking, type DbProfessional } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 function ClientSessionsInner() {
   const { t } = useLocale();
   const search = useSearchParams();
+  const { user, ready } = useSession();
   const initial = search.get("tab");
   const [tab, setTab] = useState(
     initial === "past" || initial === "cancelled" ? initial : "upcoming",
   );
-  const items = bookingsForStatus(tab as "upcoming" | "past" | "cancelled");
+  const [bookings, setBookings] = useState<DbBooking[]>([]);
+  const [pros, setPros] = useState<Record<string, DbProfessional>>({});
+
+  useEffect(() => {
+    if (!ready || !user.userId) return;
+    void (async () => {
+      const list = await db.bookings.listForClient(user.userId!);
+      setBookings(list);
+      const map: Record<string, DbProfessional> = {};
+      for (const booking of list) {
+        if (!map[booking.professionalId]) {
+          const pro = await db.professionals.getById(booking.professionalId);
+          if (pro) map[booking.professionalId] = pro;
+        }
+      }
+      setPros(map);
+    })();
+  }, [ready, user.userId]);
+
+  const items = useMemo(() => {
+    return bookings.filter((booking) => {
+      if (tab === "upcoming") return booking.status === "upcoming";
+      if (tab === "cancelled") return booking.status === "cancelled";
+      return booking.status === "completed";
+    });
+  }, [bookings, tab]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -41,7 +69,7 @@ function ClientSessionsInner() {
           />
         ) : (
           items.map((booking) => {
-            const professional = professionalById(booking.professionalId);
+            const professional = pros[booking.professionalId];
             return (
               <article key={booking.id} className="rounded-2xl border border-border bg-surface p-5">
                 <p className="font-semibold">{professional?.name}</p>

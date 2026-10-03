@@ -4,8 +4,9 @@ import { categories, routes, type CategoryId } from "@ethio-wellness/shared";
 import { Chip } from "@/components/ui/chip";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { loadProDraft, saveProDraft } from "@/lib/pro-draft";
+import { loadProDraftForUser, saveProDraftForUser } from "@/lib/pro-draft";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
@@ -13,15 +14,18 @@ function SpecialtiesInner() {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
+  const { user, ready } = useSession();
   const fromOnboarding = search.get("from") === "onboarding";
   const [selected, setSelected] = useState<CategoryId[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const draft = loadProDraft();
-    setSelected(draft.specialties);
-  }, []);
+    if (!ready || !user.userId) return;
+    void loadProDraftForUser(user.userId, user.name ?? "").then((draft) => {
+      setSelected(draft.specialties);
+    });
+  }, [ready, user.userId, user.name]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -32,14 +36,15 @@ function SpecialtiesInner() {
     );
   }, [query]);
 
-  function save() {
+  async function save() {
+    if (!user.userId) return;
     if (selected.length < 1) {
       setError(t("proSpecs.required"));
       return;
     }
     setError("");
-    const draft = loadProDraft();
-    saveProDraft({ ...draft, specialties: selected });
+    const draft = await loadProDraftForUser(user.userId, user.name ?? "");
+    await saveProDraftForUser(user.userId, { ...draft, specialties: selected });
     if (fromOnboarding) {
       router.push(`${routes.professionalAvailability}?from=onboarding`);
       return;
@@ -90,7 +95,7 @@ function SpecialtiesInner() {
       </div>
       <p className="mt-4 text-sm text-ink-3">{t("proSpecs.growing")}</p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Button onClick={save}>{t("proSpecs.save")}</Button>
+        <Button onClick={() => void save()}>{t("proSpecs.save")}</Button>
         <ButtonLink
           href={fromOnboarding ? routes.professionalOnboarding : routes.professionalHome}
           variant="text"

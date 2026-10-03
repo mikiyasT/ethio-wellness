@@ -1,12 +1,13 @@
 "use client";
 
-import { routes, slotsForProfessional } from "@ethio-wellness/shared";
+import { routes } from "@ethio-wellness/shared";
 import { SlotChip } from "@/components/domain/slot-chip";
 import { Avatar } from "@/components/ui/avatar";
 import { resolveBookingContext } from "@/lib/booking";
+import { db, type DbProfessional, type DbSlot } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 function ClientBookInner() {
   const { t } = useLocale();
@@ -14,21 +15,38 @@ function ClientBookInner() {
   const search = useSearchParams();
   const proSlug = search.get("pro");
   const slotId = search.get("slot");
-  const { professional, slot, specialtyName, fee } = useMemo(
-    () => resolveBookingContext(proSlug, slotId),
-    [proSlug, slotId],
-  );
-  const slots = slotsForProfessional(professional.id);
-  const [selected, setSelected] = useState(slot?.id ?? "");
-  const selectedSlot = slots.find((item) => item.id === selected) ?? slot;
+  const [professional, setProfessional] = useState<DbProfessional | null>(null);
+  const [slots, setSlots] = useState<DbSlot[]>([]);
+  const [specialtyName, setSpecialtyName] = useState("");
+  const [fee, setFee] = useState("");
+  const [selected, setSelected] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      const ctx = await resolveBookingContext(proSlug, slotId);
+      setProfessional(ctx.professional);
+      setSpecialtyName(ctx.specialtyName);
+      setFee(ctx.fee);
+      const list = await db.slots.listForProfessional(ctx.professional.id);
+      setSlots(list.filter((slot) => slot.status === "open" || slot.status === "booked"));
+      setSelected(ctx.slot?.id ?? list.find((slot) => slot.status === "open")?.id ?? "");
+    })();
+  }, [proSlug, slotId]);
+
+  const selectedSlot = slots.find((item) => item.id === selected);
   const dateLabel = selectedSlot ? `${selectedSlot.dayLabel}, ${selectedSlot.timeLabel}` : "TBD";
 
   function continuePayment() {
+    if (!professional) return;
     const params = new URLSearchParams({
       pro: professional.slug,
-      slot: selected || slot?.id || "",
+      slot: selected || "",
     });
     router.push(`${routes.clientPayment}?${params.toString()}`);
+  }
+
+  if (!professional) {
+    return <div className="p-8 text-ink-2">Loading…</div>;
   }
 
   return (

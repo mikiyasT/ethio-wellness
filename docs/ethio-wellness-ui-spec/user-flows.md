@@ -1,4 +1,4 @@
-# User Flows — Ethio Wellness
+# User Flows — Ayzon
 
 All steps reference screen ids in backticks. Flows describe product behavior only — no implementation.
 

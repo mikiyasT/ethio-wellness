@@ -1,4 +1,4 @@
-# Ethio Wellness — UI Specification Package
+# Ayzon — UI Specification Package
 
 **Design spec only.** This folder/zip is a **UI specification**: screens, copy, components, tokens, flows, and sample data for a design and front-end team to build from. It contains **no code, no APIs, and no authentication implementation** — any mention of "sign in," "payment," or "session join" describes what the user sees and what the product should do, not how it's built.
 

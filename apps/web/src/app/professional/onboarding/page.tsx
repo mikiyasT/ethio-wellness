@@ -4,8 +4,9 @@ import { LANGUAGES, categories, routes, type CategoryId, type LanguageId } from 
 import { Chip } from "@/components/ui/chip";
 import { Alert } from "@/components/ui/alert";
 import { TextAreaField, TextField } from "@/components/ui/field";
-import { CITIES, loadProDraft, saveProDraft } from "@/lib/pro-draft";
+import { CITIES, emptyProDraft, loadProDraftForUser, saveProDraftForUser, type ProDraft } from "@/lib/pro-draft";
 import { useLocale } from "@/lib/locale";
+import { useSession } from "@/lib/session";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -13,12 +14,14 @@ import { FormEvent, useEffect, useState } from "react";
 export default function ProfessionalOnboardingPage() {
   const { t } = useLocale();
   const router = useRouter();
-  const [draft, setDraft] = useState(loadProDraft);
+  const { user, ready } = useSession();
+  const [draft, setDraft] = useState<ProDraft>(emptyProDraft());
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setDraft(loadProDraft());
-  }, []);
+    if (!ready || !user.userId) return;
+    void loadProDraftForUser(user.userId, user.name ?? "").then(setDraft);
+  }, [ready, user.userId, user.name]);
 
   function toggleLang(id: LanguageId) {
     setDraft((current) => ({
@@ -38,8 +41,9 @@ export default function ProfessionalOnboardingPage() {
     }));
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!user.userId) return;
     if (draft.languages.length < 1) {
       setError(t("proOnboard.langRequired"));
       return;
@@ -49,7 +53,7 @@ export default function ProfessionalOnboardingPage() {
       return;
     }
     setError("");
-    saveProDraft(draft);
+    await saveProDraftForUser(user.userId, draft);
     router.push(`${routes.professionalSpecialties}?from=onboarding`);
   }
 
@@ -72,7 +76,7 @@ export default function ProfessionalOnboardingPage() {
           <Alert tone="error">{error}</Alert>
         </div>
       ) : null}
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+      <form className="mt-6 space-y-4" onSubmit={(event) => void onSubmit(event)}>
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">
             {draft.name
@@ -80,7 +84,7 @@ export default function ProfessionalOnboardingPage() {
               .map((part) => part[0])
               .join("")
               .slice(0, 2)
-              .toUpperCase() || "HT"}
+              .toUpperCase() || "?"}
           </div>
           <div>
             <p className="text-sm font-medium">{t("proOnboard.photo")}</p>
@@ -99,6 +103,7 @@ export default function ProfessionalOnboardingPage() {
           label={t("proOnboard.titleField")}
           name="title"
           value={draft.title}
+          placeholder="e.g. Clinical Psychologist"
           onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
         />
         <label className="block space-y-1.5">
@@ -108,6 +113,7 @@ export default function ProfessionalOnboardingPage() {
             value={draft.city}
             onChange={(event) => setDraft((current) => ({ ...current, city: event.target.value }))}
           >
+            <option value="">Select a city</option>
             {CITIES.map((city) => (
               <option key={city} value={city}>
                 {city}

@@ -10,7 +10,7 @@
 
 1. **Top bar** — professional nav variant (Home, Bookings, Availability, Profile), language switcher, avatar circle "HT".
 2. **Onboarding step indicator** — `.steps`: 1 · About (on), 2 · Specialties, 3 · Availability.
-3. **Heading** — "Tell us about your practice" + subline: "This is the first step in joining Ethio Wellness. Clients will see this on your public profile, so write it like you're introducing yourself to someone new."
+3. **Heading** — "Tell us about your practice" + subline: "This is the first step in joining Ayzon. Clients will see this on your public profile, so write it like you're introducing yourself to someone new."
 4. **Form card** — photo placeholder, display name, professional title, short bio, specialties chip set, languages checkboxes, "Add another language".
 5. **Footer actions** — "← Back" text action + "Continue" primary action.
 6. **Bottom nav (mobile only)** — Home, Bookings, Slots, Profile (on), Account.

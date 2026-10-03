@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  LANGUAGES,
-  availabilitySlots,
-  categoryById,
-  professionalBySlug,
-  routes,
-} from "@ethio-wellness/shared";
+import { LANGUAGES, categoryById, routes } from "@ethio-wellness/shared";
 import { AuthGate } from "@/components/domain/auth-gate";
 import { SlotChip } from "@/components/domain/slot-chip";
 import { Avatar } from "@/components/ui/avatar";
@@ -14,40 +8,71 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Tag } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { bookPath } from "@/lib/booking";
+import { db, formatFee, toCardProfessional, type DbProfessional, type DbSlot } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import { Star } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function ProfessionalDetailPage() {
   const { t } = useLocale();
   const router = useRouter();
   const { role } = useSession();
   const params = useParams<{ slug: string }>();
-  const professional = professionalBySlug(params.slug);
+  const [dbPro, setDbPro] = useState<DbProfessional | null | undefined>(undefined);
+  const [slots, setSlots] = useState<DbSlot[]>([]);
   const [gateOpen, setGateOpen] = useState(false);
-  const slots = useMemo(
-    () => availabilitySlots.filter((slot) => slot.professionalId === professional?.id),
-    [professional?.id],
-  );
-  const firstOpen = slots.find((slot) => slot.status === "open")?.id ?? "";
-  const [selected, setSelected] = useState(firstOpen);
+  const [selected, setSelected] = useState("");
 
-  if (!professional) {
+  useEffect(() => {
+    void (async () => {
+      const found = await db.professionals.getBySlug(params.slug);
+      if (!found || found.status !== "approved") {
+        setDbPro(null);
+        return;
+      }
+      setDbPro(found);
+      const list = await db.slots.listForProfessional(found.id);
+      const visible = list.filter((slot) => slot.status === "open" || slot.status === "booked");
+      setSlots(visible);
+      setSelected(visible.find((slot) => slot.status === "open")?.id ?? "");
+    })();
+  }, [params.slug]);
+
+  const professional = useMemo(
+    () => (dbPro ? toCardProfessional(dbPro) : null),
+    [dbPro],
+  );
+
+  const grouped = useMemo(
+    () =>
+      slots.reduce<Record<string, DbSlot[]>>((acc, slot) => {
+        acc[slot.dayLabel] ??= [];
+        acc[slot.dayLabel].push(slot);
+        return acc;
+      }, {}),
+    [slots],
+  );
+
+  if (dbPro === undefined) {
+    return <div className="p-8 text-ink-2">Loading…</div>;
+  }
+
+  if (!professional || !dbPro) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
-        <EmptyState title={t("notFound.title")} body={t("notFound.body")} actionHref={routes.professionals} actionLabel={t("notFound.cta")} />
+        <EmptyState
+          title={t("notFound.title")}
+          body={t("notFound.body")}
+          actionHref={routes.professionals}
+          actionLabel={t("notFound.cta")}
+        />
       </div>
     );
   }
 
-  const grouped = slots.reduce<Record<string, typeof slots>>((acc, slot) => {
-    acc[slot.dayLabel] ??= [];
-    acc[slot.dayLabel].push(slot);
-    return acc;
-  }, {});
   const selectedSlot = slots.find((slot) => slot.id === selected);
   const nextHref = selectedSlot ? bookPath(professional.slug, selectedSlot.id) : routes.clientBook;
 
@@ -91,7 +116,7 @@ export default function ProfessionalDetailPage() {
               </div>
             </div>
           ))}
-          <Button disabled={!selectedSlot} onClick={onBook} block>
+          <Button disabled={!selectedSlot || selectedSlot.status !== "open"} onClick={onBook} block>
             {t("detail.book")}
             {selectedSlot ? ` · ${selectedSlot.timeLabel}` : ""}
           </Button>
@@ -156,7 +181,7 @@ export default function ProfessionalDetailPage() {
             </div>
             <div>
               <dt className="text-sm text-ink-3">Fee</dt>
-              <dd>{t("detail.fee")}</dd>
+              <dd>{formatFee(dbPro.fee)} / session</dd>
             </div>
           </dl>
           <div className="mt-8 lg:hidden">{bookingPanel}</div>

@@ -1,55 +1,86 @@
 "use client";
 
-import {
-  LANGUAGES,
-  professionals,
-  routes,
-  type LanguageId,
-  type Professional,
-} from "@ethio-wellness/shared";
+import { LANGUAGES, routes, type LanguageId, type Professional } from "@ethio-wellness/shared";
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextAreaField, TextField } from "@/components/ui/field";
-import { CITIES, loadProDraft, saveProDraft, type ProDraft } from "@/lib/pro-draft";
+import { db, toCardProfessional } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { defaultProfessionalStatus } from "@/lib/pro-approval";
+import {
+  CITIES,
+  emptyProDraft,
+  loadProDraftForUser,
+  saveProDraftForUser,
+  type ProDraft,
+} from "@/lib/pro-draft";
+import { useSession } from "@/lib/session";
 import { useEffect, useMemo, useState } from "react";
-
-function draftToPreview(draft: ProDraft): Professional {
-  const base = professionals[0];
-  return {
-    ...base,
-    name: draft.name || base.name,
-    title: draft.title || base.title,
-    city: draft.city || base.city,
-    bio: draft.bio || base.bio,
-    languages: draft.languages.length ? draft.languages : base.languages,
-    specialties: draft.specialties.length ? draft.specialties : base.specialties,
-    initials:
-      draft.name
-        .split(" ")
-        .map((part) => part[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase() || base.initials,
-    status: "approved",
-  };
-}
 
 export default function ProfessionalProfilePage() {
   const { t } = useLocale();
-  const [draft, setDraft] = useState<ProDraft>(loadProDraft);
-  const [baseline, setBaseline] = useState<ProDraft>(loadProDraft);
+  const { user, ready, refresh } = useSession();
+  const [draft, setDraft] = useState<ProDraft>(emptyProDraft());
+  const [baseline, setBaseline] = useState<ProDraft>(emptyProDraft());
+  const [previewBase, setPreviewBase] = useState<Professional | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const loaded = loadProDraft();
-    setDraft(loaded);
-    setBaseline(loaded);
-  }, []);
+    if (!ready || !user.userId) return;
+    void (async () => {
+      const loaded = await loadProDraftForUser(user.userId!, user.name ?? "");
+      setDraft(loaded);
+      setBaseline(loaded);
+      const pro = await db.professionals.getByUserId(user.userId!);
+      if (pro) setPreviewBase(toCardProfessional(pro));
+    })();
+  }, [ready, user.userId, user.name]);
 
-  const preview = useMemo(() => draftToPreview(draft), [draft]);
+  const preview = useMemo(() => {
+    if (!previewBase) {
+      return toCardProfessional({
+        id: "preview",
+        userId: user.userId ?? "",
+        slug: "preview",
+        name: draft.name || "Your name",
+        title: draft.title || "Your title",
+        city: draft.city || "City",
+        credentials: draft.credentials,
+        bio: draft.bio,
+        practiceMore: draft.practiceMore,
+        languages: draft.languages,
+        specialties: draft.specialties,
+        fee: 25,
+        avatarClass: "av-1",
+        initials:
+          draft.name
+            .split(" ")
+            .map((part) => part[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "?",
+        status: defaultProfessionalStatus(),
+      });
+    }
+    return {
+      ...previewBase,
+      name: draft.name || previewBase.name,
+      title: draft.title || previewBase.title,
+      city: draft.city || previewBase.city,
+      bio: draft.bio || previewBase.bio,
+      languages: draft.languages.length ? draft.languages : previewBase.languages,
+      specialties: draft.specialties.length ? draft.specialties : previewBase.specialties,
+      initials:
+        draft.name
+          .split(" ")
+          .map((part) => part[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase() || previewBase.initials,
+    };
+  }, [draft, previewBase, user.userId]);
 
   function toggleLang(id: LanguageId) {
     setDraft((current) => ({
@@ -60,7 +91,8 @@ export default function ProfessionalProfilePage() {
     }));
   }
 
-  function onSave() {
+  async function onSave() {
+    if (!user.userId) return;
     if (!draft.name.trim() || !draft.title.trim()) {
       setError("Display name and professional title are required.");
       return;
@@ -70,9 +102,10 @@ export default function ProfessionalProfilePage() {
       return;
     }
     setError("");
-    saveProDraft(draft);
+    await saveProDraftForUser(user.userId, draft);
     setBaseline(draft);
     setSaved(true);
+    await refresh();
   }
 
   function onDiscard() {
@@ -160,7 +193,7 @@ export default function ProfessionalProfilePage() {
           </div>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button onClick={onSave}>{t("proProfile.save")}</Button>
+          <Button onClick={() => void onSave()}>{t("proProfile.save")}</Button>
           <Button variant="secondary" onClick={onDiscard}>
             {t("proProfile.discard")}
           </Button>

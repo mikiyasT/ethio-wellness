@@ -4,23 +4,23 @@ Warm, plain-spoken. No lorem ipsum anywhere. Screen ids are in backticks.
 
 ## Global chrome (every screen)
 
-- Brand: **Ethio Wellness**
+- Brand: **Ayzon** · Domain: **ayzoncare.com**
 - Guest nav: Home · Services · Professionals · Sign in · Create account
 - Client nav: Home · Services · Professionals · My sessions · Account
 - Professional nav: Home · Bookings · Availability · Profile · Account
 - Language switcher: EN · አማ · ትግርኛ · Afaan Oromoo
-- Footer columns — About: "Ethio Wellness connects you with licensed Ethiopian counselors and wellness professionals, in the language you think in." / Explore: Services, Professionals / Support: Help center, Contact, Privacy / Legal: Terms
-- Footer base: "© 2026 Ethio Wellness · Made with care in Addis Ababa"
+- Footer columns — About: "Ayzon connects you with licensed Ethiopian counselors and wellness professionals, in the language you think in." / Explore: Services, Professionals / Support: Help center, Contact, Privacy / Legal: Terms
+- Footer base: "© 2026 Ayzon · ayzoncare.com · Made with care in Addis Ababa"
 
 ## `splash-or-loading`
 
-- Brand mark "EW" + "Ethio Wellness" · tagline: "Support for your mind, in the language of your heart."
+- Brand mark "AZ" + "Ayzon" · tagline: "Support for your mind, in the language of your heart."
 
 ## `welcome-home`
 
 - Kicker: "Counseling in your language"
 - H1: "Support for your mind, in the language of your heart."
-- Sub: "Ethio Wellness connects you with Ethiopian counselors and wellness professionals — in Amharic, Tigrinya, Afaan Oromoo, and English. Browse freely, book when you're ready."
+- Sub: "Ayzon connects you with Ethiopian counselors and wellness professionals — in Amharic, Tigrinya, Afaan Oromoo, and English. Browse freely, book when you're ready."
 - CTAs: "Browse professionals" / "Explore services"
 - Trust badges: "✓ Licensed Ethiopian professionals" · "✓ Sessions in 4+ languages" · "✓ Private & secure"
 - Section: "How it works" — 1 "Find your counselor" / "Browse by specialty, language, and availability." · 2 "Book a 1-hour session" / "Pick a time that works for you." · 3 "Meet by video" / "Join from your phone or computer."
@@ -42,7 +42,7 @@ Warm, plain-spoken. No lorem ipsum anywhere. Screen ids are in backticks.
 
 ## `role-selection`
 
-- Title: "How will you use Ethio Wellness?"
+- Title: "How will you use Ayzon?"
 - Card A: "I'm looking for support" / "Browse counselors and book sessions."
 - Card B: "I'm a professional" / "Offer sessions and manage your practice."
 

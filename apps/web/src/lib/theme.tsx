@@ -1,8 +1,9 @@
 "use client";
 
+import { db, type ThemePref } from "@/lib/db";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type Theme = "light" | "dark";
+export type Theme = ThemePref;
 
 interface ThemeContextValue {
   theme: Theme;
@@ -10,7 +11,6 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-export const THEME_STORAGE_KEY = "ethio-wellness-theme";
 
 export function applyTheme(theme: Theme) {
   const root = document.documentElement;
@@ -22,17 +22,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    const attr = document.documentElement.getAttribute("data-theme");
-    const next: Theme = stored === "dark" || attr === "dark" ? "dark" : "light";
-    setThemeState(next);
-    applyTheme(next);
+    void (async () => {
+      const stored = await db.prefs.getTheme();
+      const attr = document.documentElement.getAttribute("data-theme");
+      const next: Theme = stored === "dark" || attr === "dark" ? "dark" : "light";
+      setThemeState(next);
+      applyTheme(next);
+    })();
   }, []);
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
     applyTheme(next);
-    window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    void db.prefs.setTheme(next);
   }, []);
 
   const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme }), [theme, setTheme]);

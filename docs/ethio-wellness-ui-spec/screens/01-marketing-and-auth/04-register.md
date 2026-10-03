@@ -1,7 +1,7 @@
 # Register — `register`
 
 ## Purpose
-Lets new visitors create a free Ethio Wellness account, starting the path to client or professional onboarding.
+Lets new visitors create a free Ayzon account, starting the path to client or professional onboarding.
 
 ## Who can see it
 Guests (signed-out visitors). Signed-in users reaching it should bounce to their home screen.
@@ -12,7 +12,7 @@ Guests (signed-out visitors). Signed-in users reaching it should bounce to their
 3. Footer (`.site-footer`, 4 columns + base row)
 
 ## Visible UI elements
-- Brand mark "EW" (52px, centered)
+- Brand mark "AZ" (52px, centered)
 - H1 "Create your free account"
 - Sub "Take the first step — it only takes a minute."
 - Field: Full name (placeholder "e.g. Miki Teshome")
