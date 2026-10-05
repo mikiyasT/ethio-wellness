@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
         {sent ? <div className="mt-4"><Alert tone="success">Check your email for a reset link.</Alert></div> : null}
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <TextField label={t("login.email")} name="email" type="email" required />
-          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-white hover:bg-primary-hover">
+          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-on-primary hover:bg-primary-hover">
             {t("forgot.submit")}
           </button>
         </form>

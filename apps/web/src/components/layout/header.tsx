@@ -119,7 +119,7 @@ export function Header({ role }: { role: UserRole }) {
           ))}
           <Link
             href={routes.login}
-            className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-4 font-semibold text-white"
+            className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-4 font-semibold text-on-primary"
             onClick={() => setOpen(false)}
           >
             {t("nav.signIn")}

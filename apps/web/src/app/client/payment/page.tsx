@@ -112,7 +112,7 @@ function ClientPaymentInner() {
         <button
           type="submit"
           disabled={state === "processing" || !hold}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white disabled:opacity-60"
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-on-primary disabled:opacity-60"
         >
           {state === "processing"
             ? "Processing…"

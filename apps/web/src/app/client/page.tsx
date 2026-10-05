@@ -57,7 +57,7 @@ export default function ClientHomePage() {
         <div className="mt-6 rounded-2xl border border-border bg-surface p-6">
           <p className="font-semibold">{t("clientHome.bookFirst")}</p>
           <div className="mt-3">
-            <ButtonLink href={routes.professionals}>{t("home.ctaProfessionals")}</ButtonLink>
+            <ButtonLink href={routes.professionals}>{t("home.ctaBrowse")}</ButtonLink>
           </div>
         </div>
       )}

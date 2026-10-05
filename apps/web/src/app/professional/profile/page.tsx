@@ -131,7 +131,7 @@ export default function ProfessionalProfilePage() {
 
       <div className="mt-6 space-y-4 rounded-2xl border border-border bg-surface p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-on-primary">
             {preview.initials}
           </div>
           <div>

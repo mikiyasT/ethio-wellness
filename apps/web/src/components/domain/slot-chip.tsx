@@ -66,9 +66,9 @@ export function SlotChip({
         locked && "cursor-not-allowed bg-surface-warm text-ink-3",
         pendingRemove && "border border-error/40 bg-surface-warm text-error",
         closed && !selected && !pendingRemove && "border border-dashed border-border bg-transparent text-ink-3",
-        !locked && selected && pending && "border border-primary/40 bg-primary-tint text-primary",
-        !locked && selected && !pending && "bg-primary text-white",
-        !locked && !closed && !selected && "border border-border bg-surface text-ink hover:bg-primary-tint",
+        !locked && selected && pending && "border border-avail/40 bg-avail-tint text-avail",
+        !locked && selected && !pending && "bg-avail text-white",
+        !locked && !closed && !selected && "border border-border bg-surface text-ink hover:bg-avail-tint",
       )}
     >
       <span className={cn(pendingRemove && "line-through decoration-error/70")}>{label}</span>

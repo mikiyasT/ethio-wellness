@@ -187,7 +187,7 @@ function ClientBookInner() {
           <button
             type="submit"
             disabled={!slot || Boolean(error && !hold)}
-            className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white disabled:opacity-50"
+            className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-on-primary disabled:opacity-50"
           >
             {t("book.continue")}
           </button>

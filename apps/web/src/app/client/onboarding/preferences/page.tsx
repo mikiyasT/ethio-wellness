@@ -72,7 +72,7 @@ export default function ClientOnboardingPreferencesPage() {
           <Link href={routes.clientHome} className="inline-flex min-h-12 items-center justify-center px-4 text-primary">
             {t("prefs.skip")}
           </Link>
-          <button type="submit" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-[10px] bg-primary font-semibold text-white">
+          <button type="submit" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-[10px] bg-primary font-semibold text-on-primary">
             {t("onboard.continue")}
           </button>
         </div>

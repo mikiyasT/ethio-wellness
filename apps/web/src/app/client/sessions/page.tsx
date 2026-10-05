@@ -65,7 +65,7 @@ function ClientSessionsInner() {
             title={t("sessions.emptyTitle")}
             body={t("sessions.emptyBody")}
             actionHref={routes.professionals}
-            actionLabel={t("home.ctaProfessionals")}
+            actionLabel={t("home.ctaBrowse")}
           />
         ) : (
           items.map((booking) => {

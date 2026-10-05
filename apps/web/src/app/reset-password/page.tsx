@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <TextField label={t("reset.password")} name="password" type="password" required />
           <TextField label={t("reset.confirm")} name="confirm" type="password" required />
-          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-white hover:bg-primary-hover">
+          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-on-primary hover:bg-primary-hover">
             {t("reset.submit")}
           </button>
         </form>
