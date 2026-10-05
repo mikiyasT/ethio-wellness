@@ -23,6 +23,7 @@ export function Footer() {
           <div className="mt-3 flex flex-col gap-2 text-sm text-white/80">
             <Link href={routes.services}>{t("nav.services")}</Link>
             <Link href={routes.professionals}>{t("nav.professionals")}</Link>
+            <Link href={routes.join}>{t("confirm.joinLink")}</Link>
           </div>
         </div>
         <div>

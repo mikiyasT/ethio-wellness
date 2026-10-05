@@ -12,29 +12,27 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export function applyTheme(theme: Theme) {
+export function applyTheme(_theme?: Theme) {
   const root = document.documentElement;
-  root.setAttribute("data-theme", theme);
-  root.style.colorScheme = theme;
+  // App is night-only — no light mode switcher.
+  root.setAttribute("data-theme", "dark");
+  root.style.colorScheme = "dark";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
+  const [theme, setThemeState] = useState<Theme>("dark");
 
   useEffect(() => {
-    void (async () => {
-      const stored = await db.prefs.getTheme();
-      const attr = document.documentElement.getAttribute("data-theme");
-      const next: Theme = stored === "dark" || attr === "dark" ? "dark" : "light";
-      setThemeState(next);
-      applyTheme(next);
-    })();
+    applyTheme("dark");
+    setThemeState("dark");
+    void db.prefs.setTheme("dark");
   }, []);
 
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    applyTheme(next);
-    void db.prefs.setTheme(next);
+  const setTheme = useCallback((_next: Theme) => {
+    // Night-only: ignore requests for light mode.
+    setThemeState("dark");
+    applyTheme("dark");
+    void db.prefs.setTheme("dark");
   }, []);
 
   const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme }), [theme, setTheme]);

@@ -14,7 +14,7 @@ export type CategoryId =
 
 export type LanguageId = "amharic" | "tigrinya" | "afaan-oromoo" | "english";
 
-export type SlotStatus = "open" | "booked" | "closed";
+export type SlotStatus = "open" | "booked" | "closed" | "held";
 
 export type BookingStatus = "upcoming" | "past" | "cancelled";
 

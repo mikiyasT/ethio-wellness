@@ -23,7 +23,7 @@ import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { defaultProfessionalStatus } from "@/lib/pro-approval";
 import { useSession } from "@/lib/session";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
@@ -53,6 +53,7 @@ function AvailabilityInner() {
   const [savedMsg, setSavedMsg] = useState(false);
   const [info, setInfo] = useState("");
   const [confirmCloseDay, setConfirmCloseDay] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<DbSlot | null>(null);
 
   async function loadBookedMeta(professionalId: string, proSlots: DbSlot[]) {
     const bookings = await db.bookings.listForProfessional(professionalId);
@@ -67,8 +68,13 @@ function AvailabilityInner() {
             booking.dateLabel.toLowerCase().includes(item.timeLabel.toLowerCase().split(" ")[0] ?? ""),
         );
       if (!slot || slot.status !== "booked") continue;
-      const client = await db.users.getById(booking.clientId);
-      const firstName = (client?.name ?? "Client").trim().split(/\s+/)[0] || "Client";
+      let firstName = "Client";
+      if (booking.guestFirstName) {
+        firstName = booking.guestFirstName;
+      } else if (booking.clientId) {
+        const client = await db.users.getById(booking.clientId);
+        firstName = (client?.name ?? "Client").trim().split(/\s+/)[0] || "Client";
+      }
       meta[slot.id] = {
         clientFirstName: firstName,
         payoutLabel: `+$${booking.fee}`,
@@ -130,9 +136,8 @@ function AvailabilityInner() {
     }
   }
 
-  function toggle(slot: DbSlot) {
-    if (slot.status === "booked" || !proId) return;
-    const nextStatus: SlotStatus = slot.status === "open" ? "closed" : "open";
+  function applySlotStatus(slot: DbSlot, nextStatus: SlotStatus) {
+    if (!proId) return;
     const next: DbSlot = {
       ...slot,
       status: nextStatus,
@@ -144,6 +149,31 @@ function AvailabilityInner() {
     setSavedMsg(false);
     setInfo("");
     setConfirmCloseDay(false);
+  }
+
+  function toggle(slot: DbSlot) {
+    if (slot.status === "booked" || slot.status === "held" || !proId) return;
+    // Opening a closed slot stays one-tap.
+    if (slot.status !== "open") {
+      applySlotStatus(slot, "open");
+      return;
+    }
+    const baseline = baselineSlots.find(
+      (item) => item.dateIso === slot.dateIso && item.timeLabel === slot.timeLabel,
+    );
+    // Unsaved "Make available" — cancel with one tap (nothing persisted yet).
+    if (baseline?.status !== "open") {
+      applySlotStatus(slot, "closed");
+      return;
+    }
+    // Saved Available requires confirmation before marking for removal.
+    setPendingRemove(slot);
+  }
+
+  function confirmRemoveAvailability() {
+    if (!pendingRemove) return;
+    applySlotStatus(pendingRemove, "closed");
+    setPendingRemove(null);
   }
 
   function shiftMonth(delta: number) {
@@ -357,14 +387,34 @@ function AvailabilityInner() {
       <div className="mt-4 grid grid-cols-3 items-stretch gap-2 sm:grid-cols-4">
         {daySlots.map((slot) => {
           const bookedMeta = slot.status === "booked" ? bookedMetaBySlotId[slot.id] : undefined;
+          const baseline = baselineSlots.find(
+            (item) => item.dateIso === slot.dateIso && item.timeLabel === slot.timeLabel,
+          );
+          const pendingOpen = slot.status === "open" && baseline?.status !== "open";
+          const pendingRemoveSlot =
+            slot.status === "closed" && baseline?.status === "open";
           return (
             <SlotChip
               key={slot.id}
               label={slot.timeLabel}
-              sublabel={slot.status === "open" ? t("proAvail.openLabel") : undefined}
+              sublabel={
+                pendingRemoveSlot
+                  ? t("proAvail.removeLabel")
+                  : slot.status === "open"
+                    ? pendingOpen
+                      ? t("proAvail.makeAvailable")
+                      : t("proAvail.openLabel")
+                    : undefined
+              }
               status={slot.status}
               selected={slot.status === "open"}
-              onClick={slot.status === "booked" ? undefined : () => toggle(slot)}
+              pending={pendingOpen}
+              pendingRemove={pendingRemoveSlot}
+              onClick={
+                slot.status === "booked" || slot.status === "held"
+                  ? undefined
+                  : () => toggle(slot)
+              }
               bookedClientFirstName={
                 slot.status === "booked" ? (bookedMeta?.clientFirstName ?? "Client") : undefined
               }
@@ -374,9 +424,13 @@ function AvailabilityInner() {
         })}
       </div>
 
-      <div className="mt-6">
-        <Alert tone="warning">{t("proAvail.note")}</Alert>
-      </div>
+      {dirty ? (
+        <div className="mt-6">
+          <Alert tone="info" icon={<Save className="h-4 w-4" aria-hidden />}>
+            {t("proAvail.note")}
+          </Alert>
+        </div>
+      ) : null}
       {info ? (
         <div className="mt-4">
           <Alert tone={confirmCloseDay ? "warning" : "info"}>{info}</Alert>
@@ -411,6 +465,36 @@ function AvailabilityInner() {
           </ButtonLink>
         ) : null}
       </div>
+
+      {pendingRemove ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="remove-slot-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-surface p-7 shadow-xl">
+            <h2 id="remove-slot-title" className="text-2xl font-semibold text-ink">
+              {t("proAvail.removeTitle")}
+            </h2>
+            <p className="mt-3 leading-6 text-ink-2">
+              {t("proAvail.removeBody").replace("{time}", pendingRemove.timeLabel)}
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
+              <Button variant="danger" onClick={confirmRemoveAvailability} className="sm:flex-1">
+                {t("proAvail.removeConfirm")}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setPendingRemove(null)}
+                className="sm:flex-1"
+              >
+                {t("proAvail.keepAvailable")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

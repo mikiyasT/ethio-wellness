@@ -4,9 +4,20 @@ import { categoryById } from "@ethio-wellness/shared";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
+import { formatProviderEat, guestDisplayName, guestFirstName } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import { useEffect, useMemo, useState } from "react";
+
+function bookingLabel(booking: DbBooking, clientsById: Record<string, DbUser>) {
+  if (booking.guestFirstName || booking.guestEmail) {
+    return guestDisplayName(booking.guestFirstName ?? "Guest", booking.guestLastName);
+  }
+  if (booking.clientId && clientsById[booking.clientId]) {
+    return clientsById[booking.clientId]!.name;
+  }
+  return "Client";
+}
 
 export default function ProfessionalBookingsPage() {
   const { t } = useLocale();
@@ -26,7 +37,7 @@ export default function ProfessionalBookingsPage() {
       setBookings(list);
       const map: Record<string, DbUser> = {};
       for (const booking of list) {
-        if (!map[booking.clientId]) {
+        if (booking.clientId && !map[booking.clientId]) {
           const client = await db.users.getById(booking.clientId);
           if (client) map[booking.clientId] = client;
         }
@@ -61,13 +72,30 @@ export default function ProfessionalBookingsPage() {
         {items.length === 0 ? (
           <EmptyState title="No bookings yet" body="When clients book you, they will appear here." />
         ) : (
-          items.map((booking) => (
-            <article key={booking.id} className="rounded-2xl border border-border bg-surface p-5">
-              <p className="font-semibold">{clientsById[booking.clientId]?.name}</p>
-              <p className="text-sm text-ink-2">{categoryById(booking.specialty)?.name}</p>
-              <p className="mt-1 text-sm">{booking.dateLabel}</p>
-            </article>
-          ))
+          items.map((booking) => {
+            const isGuest = Boolean(booking.guestEmail) && !booking.clientId;
+            return (
+              <article key={booking.id} className="rounded-2xl border border-border bg-surface p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold">{bookingLabel(booking, clientsById)}</p>
+                  {isGuest ? (
+                    <span className="rounded-full border border-border bg-surface-warm px-2 py-0.5 text-xs font-medium text-ink-2">
+                      Guest
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-sm text-ink-2">{categoryById(booking.specialty)?.name}</p>
+                <p className="mt-1 text-sm">{formatProviderEat(booking.slotAt)}</p>
+                <p className="mt-1 font-mono text-xs text-ink-3">{booking.sessionCode}</p>
+                {isGuest ? (
+                  <p className="mt-1 text-xs text-ink-3">
+                    {guestFirstName(booking)}
+                    {booking.guestEmail ? ` · ${booking.guestEmail}` : ""}
+                  </p>
+                ) : null}
+              </article>
+            );
+          })
         )}
       </div>
     </div>

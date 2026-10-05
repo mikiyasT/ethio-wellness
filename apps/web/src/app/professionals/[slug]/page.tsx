@@ -1,7 +1,7 @@
 "use client";
 
 import { LANGUAGES, categoryById, routes } from "@ethio-wellness/shared";
-import { AuthGate } from "@/components/domain/auth-gate";
+import { BookChoiceDialog } from "@/components/domain/book-choice-dialog";
 import { SlotChip } from "@/components/domain/slot-chip";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { bookPath } from "@/lib/booking";
 import { db, formatFee, toCardProfessional, type DbProfessional, type DbSlot } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { trackPixel } from "@/lib/pixel";
 import { useSession } from "@/lib/session";
 import { Star } from "lucide-react";
 import Link from "next/link";
@@ -19,15 +20,19 @@ import { useEffect, useMemo, useState } from "react";
 export default function ProfessionalDetailPage() {
   const { t } = useLocale();
   const router = useRouter();
-  const { role } = useSession();
+  const { role, user } = useSession();
   const params = useParams<{ slug: string }>();
   const [dbPro, setDbPro] = useState<DbProfessional | null | undefined>(undefined);
   const [slots, setSlots] = useState<DbSlot[]>([]);
-  const [gateOpen, setGateOpen] = useState(false);
   const [selected, setSelected] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [choiceOpen, setChoiceOpen] = useState(false);
 
   useEffect(() => {
+    trackPixel("PageView");
     void (async () => {
+      await db.bookings.releaseExpiredHolds();
       const found = await db.professionals.getBySlug(params.slug);
       if (!found || found.status !== "approved") {
         setDbPro(null);
@@ -35,7 +40,9 @@ export default function ProfessionalDetailPage() {
       }
       setDbPro(found);
       const list = await db.slots.listForProfessional(found.id);
-      const visible = list.filter((slot) => slot.status === "open" || slot.status === "booked");
+      const visible = list.filter(
+        (slot) => slot.status === "open" || slot.status === "booked" || slot.status === "held",
+      );
       setSlots(visible);
       setSelected(visible.find((slot) => slot.status === "open")?.id ?? "");
     })();
@@ -74,15 +81,41 @@ export default function ProfessionalDetailPage() {
   }
 
   const selectedSlot = slots.find((slot) => slot.id === selected);
-  const nextHref = selectedSlot ? bookPath(professional.slug, selectedSlot.id) : routes.clientBook;
+  const bookNextHref = selectedSlot ? bookPath(professional.slug, selectedSlot.id) : routes.clientBook;
+
+  async function startHoldAndBook() {
+    if (!selectedSlot || !dbPro || !professional || selectedSlot.status !== "open") return;
+    setBusy(true);
+    setError("");
+    try {
+      const hold = await db.bookings.createHold({
+        professionalId: dbPro.id,
+        slotId: selectedSlot.id,
+        clientId: role === "client" ? user.userId : undefined,
+      });
+      trackPixel("InitiateCheckout", { value: dbPro.fee, currency: "USD" });
+      setChoiceOpen(false);
+      router.push(`${bookPath(professional.slug, selectedSlot.id)}&hold=${hold.id}`);
+    } catch (err) {
+      setBusy(false);
+      setError(err instanceof Error ? err.message : "Could not hold this slot. Try another time.");
+      const list = await db.slots.listForProfessional(dbPro.id);
+      setSlots(
+        list.filter(
+          (slot) => slot.status === "open" || slot.status === "booked" || slot.status === "held",
+        ),
+      );
+    }
+  }
 
   function onBook() {
-    if (!selectedSlot) return;
+    if (!selectedSlot || selectedSlot.status !== "open") return;
+    setError("");
     if (role === "client") {
-      router.push(nextHref);
+      void startHoldAndBook();
       return;
     }
-    setGateOpen(true);
+    setChoiceOpen(true);
   }
 
   const bookingPanel = (
@@ -116,9 +149,14 @@ export default function ProfessionalDetailPage() {
               </div>
             </div>
           ))}
-          <Button disabled={!selectedSlot || selectedSlot.status !== "open"} onClick={onBook} block>
-            {t("detail.book")}
-            {selectedSlot ? ` · ${selectedSlot.timeLabel}` : ""}
+          {error ? <p className="text-sm text-error">{error}</p> : null}
+          <Button
+            disabled={!selectedSlot || selectedSlot.status !== "open" || busy}
+            onClick={onBook}
+            block
+          >
+            {busy && role === "client" ? "Holding slot…" : t("detail.book")}
+            {!(busy && role === "client") && selectedSlot ? ` · ${selectedSlot.timeLabel}` : ""}
           </Button>
           <p className="text-xs text-ink-3">{t("detail.guestNote")}</p>
         </div>
@@ -195,7 +233,16 @@ export default function ProfessionalDetailPage() {
           {t("detail.browseSimilar")}
         </ButtonLink>
       </div>
-      {gateOpen ? <AuthGate next={nextHref} onClose={() => setGateOpen(false)} /> : null}
+      {choiceOpen ? (
+        <BookChoiceDialog
+          nextHref={bookNextHref}
+          busy={busy}
+          onContinueAsGuest={() => void startHoldAndBook()}
+          onClose={() => {
+            if (!busy) setChoiceOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

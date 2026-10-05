@@ -2,22 +2,27 @@
 
 import { routes } from "@ethio-wellness/shared";
 import { Alert } from "@/components/ui/alert";
-import { TextField } from "@/components/ui/field";
-import { createBookingFromPayment, resolveBookingContext } from "@/lib/booking";
-import type { DbProfessional, DbSlot } from "@/lib/db";
-import { formatFee } from "@/lib/db";
+import { resolveBookingContext } from "@/lib/booking";
+import { db, formatFee, type DbBooking, type DbProfessional } from "@/lib/db";
+import { formatBookerLocal } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
+import { trackPixel } from "@/lib/pixel";
 import { useSession } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 
+/**
+ * Phase 1 Stripe Checkout (test mode) — simulated secure payment when Stripe
+ * keys are not configured. Swap for Stripe Checkout Session redirect when
+ * STRIPE_SECRET_KEY / NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY are set (Phase 1.1).
+ */
 function ClientPaymentInner() {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
-  const { user } = useSession();
+  const { role, user } = useSession();
   const [professional, setProfessional] = useState<DbProfessional | null>(null);
-  const [slot, setSlot] = useState<DbSlot | undefined>();
+  const [hold, setHold] = useState<DbBooking | null>(null);
   const [dateLabel, setDateLabel] = useState("");
   const [fee, setFee] = useState("");
   const [state, setState] = useState<"idle" | "processing" | "failed" | "error">("idle");
@@ -25,43 +30,58 @@ function ClientPaymentInner() {
 
   useEffect(() => {
     void (async () => {
+      await db.bookings.releaseExpiredHolds();
       const ctx = await resolveBookingContext(search.get("pro"), search.get("slot"));
       setProfessional(ctx.professional);
-      setSlot(ctx.slot);
-      setDateLabel(ctx.dateLabel);
       setFee(ctx.fee);
+      const holdId = search.get("hold");
+      if (holdId) {
+        const held = await db.bookings.getById(holdId);
+        if (held?.status === "held") {
+          setHold(held);
+          setDateLabel(formatBookerLocal(held.slotAt));
+          setFee(formatFee(held.fee));
+          return;
+        }
+        setError("Your hold expired. Please pick the slot again.");
+      }
+      setDateLabel(ctx.dateLabel);
     })();
   }, [search]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user.userId || !professional || !slot) {
-      setError("Sign in and pick a valid slot to continue.");
+    if (!professional || !hold) {
+      setError("Missing hold — go back and choose a slot.");
       setState("error");
       return;
     }
-    const data = new FormData(event.currentTarget);
+    if (role === "guest" && !hold.guestEmail) {
+      setError("Guest details missing — go back one step.");
+      setState("error");
+      return;
+    }
+
     setState("processing");
     setError("");
+
+    // Simulated Stripe Checkout test payment (4242… succeeds).
     window.setTimeout(() => {
       void (async () => {
-        if (String(data.get("card")).includes("0000")) {
-          setState("failed");
-          return;
-        }
         try {
-          const { bookingId } = await createBookingFromPayment({
-            clientId: user.userId!,
-            professionalId: professional.id,
-            slotId: slot.id,
+          const confirmed = await db.bookings.confirmHold({
+            bookingId: hold.id,
+            paymentIntentId: `pi_test_${hold.id}`,
+            clientId: role === "client" ? user.userId : undefined,
           });
-          router.push(`${routes.clientBookingConfirmation}?booking=${bookingId}`);
+          trackPixel("Purchase", { value: confirmed.fee, currency: confirmed.currency });
+          router.push(`${routes.clientBookingConfirmation}?booking=${confirmed.id}`);
         } catch (err) {
           setState("error");
-          setError(err instanceof Error ? err.message : "Could not create booking.");
+          setError(err instanceof Error ? err.message : "Payment could not be completed.");
         }
       })();
-    }, 800);
+    }, 900);
   }
 
   if (!professional) {
@@ -84,19 +104,21 @@ function ClientPaymentInner() {
         </Alert>
       </div>
       <form className="mt-6 space-y-4" onSubmit={(event) => void onSubmit(event)}>
-        <TextField label={t("pay.card")} name="card" placeholder="4242 4242 4242 4242" />
-        <div className="grid grid-cols-2 gap-3">
-          <TextField label={t("pay.expiry")} name="expiry" placeholder="12/28" />
-          <TextField label={t("pay.cvc")} name="cvc" placeholder="123" />
-        </div>
-        <TextField label={t("pay.name")} name="name" defaultValue={user.name ?? ""} />
+        <p className="text-sm text-ink-2">
+          Secure checkout (Stripe test mode). You will be charged{" "}
+          <span className="font-semibold text-ink">{fee || formatFee(professional.fee)}</span> — the
+          counselor’s session fee.
+        </p>
         <button
           type="submit"
-          disabled={state === "processing"}
+          disabled={state === "processing" || !hold}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white disabled:opacity-60"
         >
-          {state === "processing" ? "Processing…" : `Pay ${fee || formatFee(professional.fee)}`}
+          {state === "processing"
+            ? "Processing…"
+            : `Pay ${fee || formatFee(professional.fee)} securely`}
         </button>
+        <p className="text-xs text-ink-3">No account required. Card details are handled by Stripe in production.</p>
       </form>
     </div>
   );

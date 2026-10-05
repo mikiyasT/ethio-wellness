@@ -17,10 +17,24 @@ const PRO_ONBOARDING_PATHS = [
   "/professional/pending",
 ];
 
+/** Guest booking funnel — no account required (Phase 1 differentiator). */
+const GUEST_BOOKING_PATHS = [
+  "/client/book",
+  "/client/payment",
+  "/client/booking-confirmation",
+];
+
+function isGuestBookingPath(pathname: string) {
+  return GUEST_BOOKING_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { role, user, ready } = useSession();
+  const guestBooking = isGuestBookingPath(pathname);
 
   const isClientArea =
     pathname === "/client" || pathname.startsWith("/client/") || pathname.startsWith("/account");
@@ -28,11 +42,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isProOnboardingFlow = PRO_ONBOARDING_PATHS.some(
     (path) => pathname === path || (path !== "/professional/pending" && pathname.startsWith(path)),
   );
+  const requiresAuth =
+    ((isClientArea && !guestBooking) || isProArea) && role === "guest";
 
   useEffect(() => {
     if (!ready) return;
-    if ((isClientArea || isProArea) && role === "guest") {
-      // Don't bounce login back to Account — dashboards are the post-login home.
+    if (requiresAuth) {
       if (pathname === routes.account || pathname.startsWith(`${routes.account}/`)) {
         router.replace(routes.login);
         return;
@@ -41,7 +56,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       router.replace(`${routes.login}?next=${encodeURIComponent(next)}`);
       return;
     }
-    if (isClientArea && role === "professional" && pathname.startsWith("/client")) {
+    if (
+      isClientArea &&
+      !guestBooking &&
+      role === "professional" &&
+      pathname.startsWith("/client")
+    ) {
       router.replace(routes.professionalHome);
       return;
     }
@@ -60,12 +80,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ) {
       router.replace(routes.professionalPending);
     }
-  }, [ready, isClientArea, isProArea, isProOnboardingFlow, role, user, pathname, router]);
+  }, [
+    ready,
+    requiresAuth,
+    isClientArea,
+    isProArea,
+    isProOnboardingFlow,
+    guestBooking,
+    role,
+    user,
+    pathname,
+    router,
+  ]);
 
   const chromeRole = role !== "guest" ? role : "guest";
-  const showSidebar = chromeRole !== "guest" && !pathname.startsWith("/professional/pending");
+  const showSidebar =
+    chromeRole !== "guest" &&
+    !pathname.startsWith("/professional/pending") &&
+    !guestBooking;
 
-  if ((isClientArea || isProArea) && (!ready || role === "guest")) {
+  if (requiresAuth && (!ready || role === "guest")) {
     return (
       <div className="flex min-h-full flex-col">
         <Header role="guest" />
@@ -84,10 +118,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="min-w-0 flex-1">{children}</div>
         </div>
       ) : (
-        <main className="flex-1">{children}</main>
+        <main className={guestBooking ? "mx-auto w-full max-w-[1200px] flex-1 px-4 py-8" : "flex-1"}>
+          {children}
+        </main>
       )}
       <Footer />
-      <BottomNav role={chromeRole} />
+      {!guestBooking ? <BottomNav role={chromeRole} /> : null}
     </div>
   );
 }

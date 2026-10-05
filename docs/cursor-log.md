@@ -67,3 +67,10 @@ Entries after each pushed work session. Buddy reviews against `docs/ethio-wellne
 - New pros default to **approved**; onboarding finish → dashboard (skips pending).
 - Existing pending pros flipped to approved on store read; client browse lists include them.
 - Set the flag to `false` to restore manual review.
+
+### 2026-10-04 — Guest booking Phase 1 (pilot)
+
+- Auth gate removed from book CTA; guests use `/client/book|payment|booking-confirmation` without login.
+- 10-min slot holds, guest form, simulated Stripe test pay at pro fee, AYZ session codes, .ics, soft account CTA.
+- Provider bookings show Guest badge; Meta Pixel generic events stubbed.
+- Tracker: `docs/guest-booking-phases.md` (Phase 2/3 deferred).

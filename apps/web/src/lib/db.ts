@@ -14,6 +14,18 @@ import {
   type Professional,
 } from "@ethio-wellness/shared";
 import { AUTO_APPROVE_PROFESSIONALS, defaultProfessionalStatus } from "@/lib/pro-approval";
+import {
+  generateOpaqueToken,
+  generateSessionCode,
+  hashToken,
+  holdExpiresAt,
+  isHoldActive,
+  MAX_PENDING_BOOKINGS_PER_EMAIL,
+  normalizeEmail,
+  normalizeSessionCode,
+  slotAtUtc,
+  SLOT_HOLD_MINUTES,
+} from "@/lib/guest-booking";
 
 const DB_KEY = "ayzon-db-v1";
 const LEGACY_DB_KEY = "ethio-wellness-db-v1";
@@ -55,21 +67,45 @@ export interface DbSlot {
   dateIso: string;
   dayLabel: string;
   timeLabel: string;
-  status: "open" | "closed" | "booked";
+  status: "open" | "closed" | "booked" | "held";
+  holdExpiresAt?: string;
+  holdBookingId?: string;
 }
+
+export type DbBookingStatus = "held" | "upcoming" | "cancelled" | "completed";
 
 export interface DbBooking {
   id: string;
-  clientId: string;
+  /** Signed-in client — mutually exclusive with guest fields for new guest bookings. */
+  clientId?: string;
   professionalId: string;
   slotId: string;
   specialty: CategoryId;
+  /** Legacy display label; prefer slotAt + formatters. */
   dateLabel: string;
+  /** Session start in UTC (ISO). */
+  slotAt: string;
+  durationMin: number;
   fee: number;
-  status: "upcoming" | "cancelled" | "completed";
+  feeCents: number;
+  currency: string;
+  status: DbBookingStatus;
   createdAt: string;
+  holdExpiresAt?: string;
+  sessionCode: string;
+  manageTokenHash?: string;
+  joinTokenHash?: string;
+  /** Raw manage token kept only for pilot confirmation UI (Phase 2: email link only). */
+  manageToken?: string;
+  paymentIntentId?: string;
   linkState?: "ready" | "pending";
-  cancelledBy?: "client" | "professional";
+  cancelledBy?: "client" | "professional" | "guest" | "system";
+  guestFirstName?: string;
+  guestLastName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  guestNote?: string;
+  claimedAt?: string;
 }
 
 export type ThemePref = "light" | "dark";
@@ -289,47 +325,63 @@ function buildSeed(): Store {
           slot.professionalId === booking.professionalId &&
           booking.dateLabel.toLowerCase().includes(slot.timeLabel.toLowerCase().split(" ")[0] ?? ""),
       ) ?? slots.find((slot) => slot.professionalId === booking.professionalId);
-    const status =
+    const status: DbBookingStatus =
       booking.status === "past" ? "completed" : booking.status === "cancelled" ? "cancelled" : "upcoming";
-    return {
-      id: booking.id,
-      clientId: booking.clientId === "client-abel" ? abelId : booking.clientId,
-      professionalId: booking.professionalId,
-      slotId: matchingSlot?.id ?? `slot-seed-${booking.id}`,
-      specialty: booking.specialty,
-      dateLabel: booking.dateLabel,
-      fee: 25,
-      status,
-      createdAt: nowIso(),
-      linkState: booking.linkState,
-      cancelledBy: booking.cancelledBy,
-    };
+    return toSeedBooking(
+      {
+        id: booking.id,
+        clientId: booking.clientId === "client-abel" ? abelId : booking.clientId,
+        professionalId: booking.professionalId,
+        slotId: matchingSlot?.id ?? `slot-seed-${booking.id}`,
+        specialty: booking.specialty,
+        dateLabel: booking.dateLabel,
+        fee: 25,
+        status,
+        createdAt: nowIso(),
+        linkState: booking.linkState,
+        cancelledBy: booking.cancelledBy,
+      },
+      matchingSlot,
+    );
   });
 
-  bookings.push({
-    id: "booking-test-client-1",
-    clientId: testClientId,
-    professionalId: testProviderProId,
-    slotId: "slot-test-provider-3",
-    specialty: "individual-mental-health",
-    dateLabel: `${formatDayChip(tomorrowIso)}, 2:00 PM`,
-    fee: 25,
-    status: "upcoming",
-    createdAt: nowIso(),
-    linkState: "ready",
-  });
-  bookings.push({
-    id: "booking-test-client-2",
-    clientId: testClientId,
-    professionalId: "pro-hana-tesfaye",
-    slotId: "slot-2",
-    specialty: "individual-mental-health",
-    dateLabel: "Sat Oct 3, 4:00 PM EAT",
-    fee: 25,
-    status: "upcoming",
-    createdAt: nowIso(),
-    linkState: "pending",
-  });
+  const testSlot3 = slots.find((slot) => slot.id === "slot-test-provider-3");
+  const hanaSlot2 = slots.find((slot) => slot.id === "slot-2");
+
+  bookings.push(
+    toSeedBooking(
+      {
+        id: "booking-test-client-1",
+        clientId: testClientId,
+        professionalId: testProviderProId,
+        slotId: "slot-test-provider-3",
+        specialty: "individual-mental-health",
+        dateLabel: `${formatDayChip(tomorrowIso)}, 2:00 PM`,
+        fee: 25,
+        status: "upcoming",
+        createdAt: nowIso(),
+        linkState: "ready",
+      },
+      testSlot3,
+    ),
+  );
+  bookings.push(
+    toSeedBooking(
+      {
+        id: "booking-test-client-2",
+        clientId: testClientId,
+        professionalId: "pro-hana-tesfaye",
+        slotId: "slot-2",
+        specialty: "individual-mental-health",
+        dateLabel: "Sat Oct 3, 4:00 PM EAT",
+        fee: 25,
+        status: "upcoming",
+        createdAt: nowIso(),
+        linkState: "pending",
+      },
+      hanaSlot2,
+    ),
+  );
 
   return {
     version: 1,
@@ -338,7 +390,7 @@ function buildSeed(): Store {
     slots,
     bookings,
     sessionUserId: null,
-    theme: "light",
+    theme: "dark",
   };
 }
 
@@ -350,12 +402,46 @@ function emptyStore(): Store {
     slots: [],
     bookings: [],
     sessionUserId: null,
-    theme: "light",
+    theme: "dark",
   };
 }
 
-function canUseStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+function makeSessionFields() {
+  const manageToken = generateOpaqueToken();
+  const joinToken = generateOpaqueToken();
+  return {
+    sessionCode: generateSessionCode(),
+    manageToken,
+    manageTokenHash: hashToken(manageToken),
+    joinTokenHash: hashToken(joinToken),
+  };
+}
+
+function bookingSlotAt(slot: DbSlot | undefined, dateLabel: string): string {
+  if (slot) return slotAtUtc(slot.dateIso, slot.timeLabel);
+  return new Date().toISOString();
+}
+
+function toSeedBooking(
+  partial: Omit<DbBooking, "slotAt" | "durationMin" | "feeCents" | "currency" | "sessionCode"> & {
+    slotAt?: string;
+    sessionCode?: string;
+  },
+  slot?: DbSlot,
+): DbBooking {
+  const fee = partial.fee;
+  const tokens = makeSessionFields();
+  return {
+    ...partial,
+    slotAt: partial.slotAt ?? bookingSlotAt(slot, partial.dateLabel),
+    durationMin: 60,
+    feeCents: Math.round(fee * 100),
+    currency: "USD",
+    sessionCode: partial.sessionCode ?? tokens.sessionCode,
+    manageToken: partial.manageToken ?? tokens.manageToken,
+    manageTokenHash: partial.manageTokenHash ?? tokens.manageTokenHash,
+    joinTokenHash: partial.joinTokenHash ?? tokens.joinTokenHash,
+  };
 }
 
 /** TEMP: flip pending → approved while auto-approve is on. */
@@ -420,6 +506,10 @@ function ensureDemoAccountsInStore(store: Store): boolean {
   return changed;
 }
 
+function canUseStorage() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
 function readStore(): Store {
   if (!canUseStorage()) return buildSeed();
   try {
@@ -450,7 +540,7 @@ function readStore(): Store {
       slots: parsed.slots ?? [],
       bookings: parsed.bookings ?? [],
       sessionUserId: parsed.sessionUserId ?? null,
-      theme: parsed.theme === "dark" ? "dark" : "light",
+      theme: "dark",
     };
     const demoChanged = ensureDemoAccountsInStore(store);
     const approvedChanged = ensureAutoApprovedProfessionals(store);
@@ -489,8 +579,8 @@ function mutate(fn: (store: Store) => void): Store {
   return store;
 }
 
-/** FOUC / chrome theme script — keep localStorage access inside this module only. */
-export const themeInitScript = `(function(){try{var raw=localStorage.getItem("${DB_KEY}")||localStorage.getItem("${LEGACY_DB_KEY}");var t="light";if(raw){var p=JSON.parse(raw);if(p&&p.theme==="dark")t="dark";}document.documentElement.setAttribute("data-theme",t);document.documentElement.style.colorScheme=t;}catch(e){}document.addEventListener("change",function(e){var el=e.target;if(!el||el.getAttribute("data-chrome")!=="theme")return;var v=el.value==="dark"?"dark":"light";document.documentElement.setAttribute("data-theme",v);document.documentElement.style.colorScheme=v;try{var raw2=localStorage.getItem("${DB_KEY}")||localStorage.getItem("${LEGACY_DB_KEY}");var store=raw2?JSON.parse(raw2):{version:1,users:[],professionals:[],slots:[],bookings:[],sessionUserId:null};store.theme=v;localStorage.setItem("${DB_KEY}",JSON.stringify(store));}catch(err){}},true);})();`;
+/** FOUC script — night-only app theme. */
+export const themeInitScript = `(function(){document.documentElement.setAttribute("data-theme","dark");document.documentElement.style.colorScheme="dark";})();`;
 
 export function formatFee(fee: number) {
   return `$${fee}`;
@@ -716,14 +806,43 @@ export const db = {
   },
 
   bookings: {
-    async create(input: {
-      clientId: string;
+    async releaseExpiredHolds() {
+      mutate((store) => {
+        const now = new Date();
+        for (const booking of store.bookings) {
+          if (booking.status !== "held") continue;
+          if (isHoldActive(booking.holdExpiresAt, now)) continue;
+          booking.status = "cancelled";
+          booking.cancelledBy = "system";
+          const slot = store.slots.find((item) => item.id === booking.slotId);
+          if (slot && (slot.status === "held" || slot.holdBookingId === booking.id)) {
+            slot.status = "open";
+            delete slot.holdExpiresAt;
+            delete slot.holdBookingId;
+          }
+        }
+      });
+    },
+
+    async countPendingByEmail(email: string) {
+      await db.bookings.releaseExpiredHolds();
+      const key = normalizeEmail(email);
+      return readStore().bookings.filter(
+        (booking) =>
+          booking.guestEmail === key &&
+          (booking.status === "held" || booking.status === "upcoming"),
+      ).length;
+    },
+
+    /**
+     * Soft-hold a slot for SLOT_HOLD_MINUTES. Guest/client details attached later on confirm.
+     */
+    async createHold(input: {
       professionalId: string;
       slotId: string;
-      specialty: CategoryId;
-      dateLabel: string;
-      fee: number;
+      clientId?: string;
     }): Promise<DbBooking> {
+      await db.bookings.releaseExpiredHolds();
       const store = readStore();
       const slot = store.slots.find((item) => item.id === input.slotId);
       if (!slot) throw new Error("Slot not found");
@@ -731,7 +850,147 @@ export const db = {
         throw new Error("Slot does not belong to this professional");
       }
       if (slot.status === "booked") throw new Error("Slot already booked");
+      if (slot.status === "held" && isHoldActive(slot.holdExpiresAt)) {
+        throw new Error("Someone else is holding this slot — try another time");
+      }
 
+      const professional = store.professionals.find((pro) => pro.id === input.professionalId);
+      if (!professional) throw new Error("Professional not found");
+
+      const expires = holdExpiresAt(new Date(), SLOT_HOLD_MINUTES);
+      const tokens = makeSessionFields();
+      const specialty = professional.specialties[0] ?? "individual-mental-health";
+      const booking: DbBooking = {
+        id: id("booking"),
+        clientId: input.clientId,
+        professionalId: input.professionalId,
+        slotId: input.slotId,
+        specialty,
+        dateLabel: `${slot.dayLabel}, ${slot.timeLabel}`,
+        slotAt: slotAtUtc(slot.dateIso, slot.timeLabel),
+        durationMin: 60,
+        fee: professional.fee,
+        feeCents: Math.round(professional.fee * 100),
+        currency: "USD",
+        status: "held",
+        createdAt: nowIso(),
+        holdExpiresAt: expires,
+        sessionCode: tokens.sessionCode,
+        manageToken: tokens.manageToken,
+        manageTokenHash: tokens.manageTokenHash,
+        joinTokenHash: tokens.joinTokenHash,
+        linkState: "pending",
+      };
+
+      mutate((s) => {
+        s.bookings.push(booking);
+        const target = s.slots.find((item) => item.id === input.slotId);
+        if (target) {
+          target.status = "held";
+          target.holdExpiresAt = expires;
+          target.holdBookingId = booking.id;
+        }
+      });
+      return booking;
+    },
+
+    async updateHoldGuest(
+      bookingId: string,
+      guest: {
+        firstName: string;
+        lastName?: string;
+        email: string;
+        phone?: string;
+        note?: string;
+      },
+    ) {
+      await db.bookings.releaseExpiredHolds();
+      const email = normalizeEmail(guest.email);
+      if (!guest.firstName.trim()) throw new Error("First name is required");
+      if (!email || !email.includes("@")) throw new Error("A valid email is required");
+
+      const pending = await db.bookings.countPendingByEmail(email);
+      const existing = await db.bookings.getById(bookingId);
+      const alreadyCounted =
+        existing?.guestEmail === email &&
+        (existing.status === "held" || existing.status === "upcoming");
+      if (pending - (alreadyCounted ? 1 : 0) >= MAX_PENDING_BOOKINGS_PER_EMAIL) {
+        throw new Error("Too many open bookings for this email. Please use an existing confirmation or try later.");
+      }
+
+      let updated: DbBooking | undefined;
+      mutate((store) => {
+        const booking = store.bookings.find((item) => item.id === bookingId);
+        if (!booking || booking.status !== "held") return;
+        if (!isHoldActive(booking.holdExpiresAt)) return;
+        booking.guestFirstName = guest.firstName.trim();
+        booking.guestLastName = guest.lastName?.trim() || undefined;
+        booking.guestEmail = email;
+        booking.guestPhone = guest.phone?.trim() || undefined;
+        booking.guestNote = guest.note?.trim() || undefined;
+        updated = booking;
+      });
+      if (!updated) throw new Error("Your hold expired — please pick the slot again");
+      return updated;
+    },
+
+    async confirmHold(input: {
+      bookingId: string;
+      paymentIntentId?: string;
+      clientId?: string;
+    }): Promise<DbBooking> {
+      await db.bookings.releaseExpiredHolds();
+      let confirmed: DbBooking | undefined;
+      mutate((store) => {
+        const booking = store.bookings.find((item) => item.id === input.bookingId);
+        if (!booking || booking.status !== "held") return;
+        if (!isHoldActive(booking.holdExpiresAt)) return;
+        if (input.clientId) booking.clientId = input.clientId;
+        if (!booking.clientId && !booking.guestEmail) return;
+        booking.status = "upcoming";
+        booking.paymentIntentId = input.paymentIntentId ?? `pi_test_${booking.id}`;
+        delete booking.holdExpiresAt;
+        const slot = store.slots.find((item) => item.id === booking.slotId);
+        if (slot) {
+          slot.status = "booked";
+          delete slot.holdExpiresAt;
+          delete slot.holdBookingId;
+        }
+        confirmed = booking;
+      });
+      if (!confirmed) throw new Error("Could not confirm booking — hold may have expired");
+      return confirmed;
+    },
+
+    async create(input: {
+      clientId?: string;
+      professionalId: string;
+      slotId: string;
+      specialty: CategoryId;
+      dateLabel: string;
+      fee: number;
+      guestFirstName?: string;
+      guestLastName?: string;
+      guestEmail?: string;
+      guestPhone?: string;
+      guestNote?: string;
+    }): Promise<DbBooking> {
+      await db.bookings.releaseExpiredHolds();
+      const store = readStore();
+      const slot = store.slots.find((item) => item.id === input.slotId);
+      if (!slot) throw new Error("Slot not found");
+      if (slot.professionalId !== input.professionalId) {
+        throw new Error("Slot does not belong to this professional");
+      }
+      if (slot.status === "booked") throw new Error("Slot already booked");
+      if (slot.status === "held" && isHoldActive(slot.holdExpiresAt)) {
+        throw new Error("Someone else is holding this slot — try another time");
+      }
+      if (!input.clientId && !input.guestEmail) {
+        throw new Error("Client or guest email required");
+      }
+
+      const tokens = makeSessionFields();
       const booking: DbBooking = {
         id: id("booking"),
         clientId: input.clientId,
@@ -739,39 +998,84 @@ export const db = {
         slotId: input.slotId,
         specialty: input.specialty,
         dateLabel: input.dateLabel,
+        slotAt: slotAtUtc(slot.dateIso, slot.timeLabel),
+        durationMin: 60,
         fee: input.fee,
+        feeCents: Math.round(input.fee * 100),
+        currency: "USD",
         status: "upcoming",
         createdAt: nowIso(),
+        sessionCode: tokens.sessionCode,
+        manageToken: tokens.manageToken,
+        manageTokenHash: tokens.manageTokenHash,
+        joinTokenHash: tokens.joinTokenHash,
         linkState: "pending",
+        guestFirstName: input.guestFirstName,
+        guestLastName: input.guestLastName,
+        guestEmail: input.guestEmail ? normalizeEmail(input.guestEmail) : undefined,
+        guestPhone: input.guestPhone,
+        guestNote: input.guestNote,
+        paymentIntentId: `pi_test_${id("pay")}`,
       };
 
       mutate((s) => {
         s.bookings.push(booking);
         const target = s.slots.find((item) => item.id === input.slotId);
-        if (target) target.status = "booked";
+        if (target) {
+          target.status = "booked";
+          delete target.holdExpiresAt;
+          delete target.holdBookingId;
+        }
       });
       return booking;
     },
 
     async listForClient(clientId: string) {
-      return readStore().bookings.filter((booking) => booking.clientId === clientId);
+      await db.bookings.releaseExpiredHolds();
+      return readStore().bookings.filter(
+        (booking) => booking.clientId === clientId && booking.status !== "held",
+      );
     },
 
     async listForProfessional(proId: string) {
-      return readStore().bookings.filter((booking) => booking.professionalId === proId);
+      await db.bookings.releaseExpiredHolds();
+      return readStore().bookings.filter(
+        (booking) => booking.professionalId === proId && booking.status !== "held",
+      );
     },
 
     async getById(bookingId: string) {
+      await db.bookings.releaseExpiredHolds();
       return readStore().bookings.find((booking) => booking.id === bookingId);
     },
 
-    async cancel(bookingId: string, cancelledBy: "client" | "professional" = "client") {
+    /** Guest recovery: session code + email → confirmed booking (no id guessing). */
+    async findBySessionCodeAndEmail(sessionCode: string, email: string) {
+      await db.bookings.releaseExpiredHolds();
+      const code = normalizeSessionCode(sessionCode);
+      const key = normalizeEmail(email);
+      if (!code || !key) return undefined;
+      return readStore().bookings.find(
+        (booking) =>
+          booking.sessionCode === code &&
+          booking.guestEmail === key &&
+          booking.status !== "held",
+      );
+    },
+
+    async cancel(bookingId: string, cancelledBy: "client" | "professional" | "guest" | "system" = "client") {
       let updated: DbBooking | undefined;
       mutate((store) => {
         const booking = store.bookings.find((item) => item.id === bookingId);
         if (!booking || booking.status === "cancelled") return;
         booking.status = "cancelled";
         booking.cancelledBy = cancelledBy;
+        const slot = store.slots.find((item) => item.id === booking.slotId);
+        if (slot && (slot.status === "booked" || slot.status === "held")) {
+          slot.status = "open";
+          delete slot.holdExpiresAt;
+          delete slot.holdBookingId;
+        }
         updated = booking;
       });
       return updated;
