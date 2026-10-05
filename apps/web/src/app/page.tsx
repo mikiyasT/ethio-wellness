@@ -70,7 +70,7 @@ export default function WelcomeHomePage() {
           </div>
           <div className="absolute left-[4%] top-0 z-[1] w-[min(62%,330px)] -rotate-3 overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:left-[1%] max-[520px]:w-[61%] max-[520px]:rounded-[13px]">
             <Image
-              src="/home/poster-female-v4.png"
+              src="/home/poster-female-v4.jpg"
               alt="Ayzon campaign poster featuring a young Ethiopian woman"
               width={660}
               height={1174}
@@ -81,7 +81,7 @@ export default function WelcomeHomePage() {
           </div>
           <div className="absolute bottom-0 right-[-3%] z-[2] w-[min(62%,330px)] origin-[50%_82%] rotate-[9deg] overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:right-0 max-[520px]:w-[61%] max-[520px]:rounded-[13px]">
             <Image
-              src="/home/poster-male-v4.png"
+              src="/home/poster-male-v4.jpg"
               alt="Ayzon campaign poster featuring a young Ethiopian man"
               width={660}
               height={1174}
