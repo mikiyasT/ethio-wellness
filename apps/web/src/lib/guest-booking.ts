@@ -153,6 +153,41 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+/** Accept `AYZ-XXXX`, `ayz-xxxx`, or bare `XXXX`. */
+export function normalizeSessionCode(raw: string): string {
+  const cleaned = raw.trim().toUpperCase().replace(/[\s_]/g, "");
+  if (/^AYZ-[0-9A-HJKMNPQRSTVWXYZ]{4}$/.test(cleaned)) return cleaned;
+  if (/^[0-9A-HJKMNPQRSTVWXYZ]{4}$/.test(cleaned)) return `AYZ-${cleaned}`;
+  return cleaned;
+}
+
+/** Join opens 15 min before start, closes 30 min after (pilot lobby window). */
+export function getJoinWindow(slotAt: string, now = new Date()) {
+  const start = new Date(slotAt).getTime();
+  const openAt = start - 15 * 60_000;
+  const closeAt = start + 30 * 60_000;
+  const t = now.getTime();
+  if (Number.isNaN(start)) {
+    return { canJoin: false as const, phase: "invalid" as const, opensInMs: 0 };
+  }
+  if (t < openAt) {
+    return { canJoin: false as const, phase: "soon" as const, opensInMs: openAt - t };
+  }
+  if (t > closeAt) {
+    return { canJoin: false as const, phase: "ended" as const, opensInMs: 0 };
+  }
+  return { canJoin: true as const, phase: "open" as const, opensInMs: 0 };
+}
+
+export function formatOpensIn(ms: number): string {
+  const totalMin = Math.max(1, Math.ceil(ms / 60_000));
+  if (totalMin < 60) return `${totalMin} min`;
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (mins === 0) return hours === 1 ? "1 hour" : `${hours} hours`;
+  return `${hours}h ${mins}m`;
+}
+
 export function guestDisplayName(first: string, last?: string | null) {
   return [first.trim(), last?.trim()].filter(Boolean).join(" ");
 }

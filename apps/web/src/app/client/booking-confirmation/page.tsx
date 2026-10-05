@@ -12,6 +12,7 @@ import {
 import { useLocale } from "@/lib/locale";
 import { trackPixel } from "@/lib/pixel";
 import { useSession } from "@/lib/session";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -97,6 +98,15 @@ function BookingConfirmationInner() {
         <p className="mt-4 text-sm text-ink-2">
           We sent your confirmation to <span className="font-medium text-ink">{booking.guestEmail}</span>
           .
+        </p>
+      ) : null}
+
+      {isGuestBooking ? (
+        <p className="mt-3 text-sm text-ink-2">
+          {t("confirm.joinHint")}{" "}
+          <Link href={routes.join} className="font-semibold text-primary hover:underline">
+            {t("confirm.joinLink")}
+          </Link>
         </p>
       ) : null}
 

@@ -20,6 +20,7 @@ export const routes = {
   clientBookingConfirmation: "/client/booking-confirmation",
   clientSessions: "/client/sessions",
   clientSessionDetail: (id: string) => `/client/sessions/${id}`,
+  join: "/join",
   professionalHome: "/professional",
   professionalOnboarding: "/professional/onboarding",
   professionalProfile: "/professional/profile",

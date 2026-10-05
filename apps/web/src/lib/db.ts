@@ -22,6 +22,7 @@ import {
   isHoldActive,
   MAX_PENDING_BOOKINGS_PER_EMAIL,
   normalizeEmail,
+  normalizeSessionCode,
   slotAtUtc,
   SLOT_HOLD_MINUTES,
 } from "@/lib/guest-booking";
@@ -1046,6 +1047,20 @@ export const db = {
     async getById(bookingId: string) {
       await db.bookings.releaseExpiredHolds();
       return readStore().bookings.find((booking) => booking.id === bookingId);
+    },
+
+    /** Guest recovery: session code + email → confirmed booking (no id guessing). */
+    async findBySessionCodeAndEmail(sessionCode: string, email: string) {
+      await db.bookings.releaseExpiredHolds();
+      const code = normalizeSessionCode(sessionCode);
+      const key = normalizeEmail(email);
+      if (!code || !key) return undefined;
+      return readStore().bookings.find(
+        (booking) =>
+          booking.sessionCode === code &&
+          booking.guestEmail === key &&
+          booking.status !== "held",
+      );
     },
 
     async cancel(bookingId: string, cancelledBy: "client" | "professional" | "guest" | "system" = "client") {

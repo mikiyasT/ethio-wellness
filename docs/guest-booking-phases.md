@@ -25,6 +25,7 @@
 | Session code `AYZ-XXXX` (Crockford) | **Done** |
 | Tokens generated on booking (manage/join hashes) for Phase 2 | **Done** |
 | Soft fork before book: guest (primary) vs create account | **Done** |
+| `/join` recovery: session code + email → lobby | **Done** |
 
 ### Phase 1 acceptance
 
