@@ -60,9 +60,14 @@ export async function resolveBookingContext(
 }
 
 export async function createBookingFromPayment(input: {
-  clientId: string;
+  clientId?: string;
   professionalId: string;
   slotId: string;
+  guestFirstName?: string;
+  guestLastName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  guestNote?: string;
 }): Promise<{ bookingId: string }> {
   const professional = await db.professionals.getById(input.professionalId);
   const slot = await db.slots.getById(input.slotId);
@@ -79,6 +84,11 @@ export async function createBookingFromPayment(input: {
     specialty,
     dateLabel: `${slot.dayLabel}, ${slot.timeLabel}`,
     fee: professional.fee,
+    guestFirstName: input.guestFirstName,
+    guestLastName: input.guestLastName,
+    guestEmail: input.guestEmail,
+    guestPhone: input.guestPhone,
+    guestNote: input.guestNote,
   });
   return { bookingId: booking.id };
 }

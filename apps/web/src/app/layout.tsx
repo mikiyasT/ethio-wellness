@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Noto_Sans_Ethiopic } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
+import { PixelPageView } from "@/components/pixel-page-view";
 import { Providers } from "@/components/providers";
 import { themeInitScript } from "@/lib/db";
 import "./globals.css";
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full font-sans">
         <Providers>
+          <PixelPageView />
           <AppShell>{children}</AppShell>
         </Providers>
       </body>

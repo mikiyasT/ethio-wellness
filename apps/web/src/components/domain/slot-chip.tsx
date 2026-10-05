@@ -6,6 +6,8 @@ export function SlotChip({
   sublabel,
   status,
   selected,
+  pending,
+  pendingRemove,
   onClick,
   bookedClientFirstName,
   bookedPayout,
@@ -14,6 +16,10 @@ export function SlotChip({
   sublabel?: string;
   status: SlotStatus;
   selected?: boolean;
+  /** Unsaved open — softer green until Save availability */
+  pending?: boolean;
+  /** Unsaved remove — strikethrough hour until Save availability */
+  pendingRemove?: boolean;
   onClick?: () => void;
   /** Provider availability: first name of the booked client */
   bookedClientFirstName?: string;
@@ -21,6 +27,8 @@ export function SlotChip({
   bookedPayout?: string;
 }) {
   const booked = status === "booked";
+  const held = status === "held";
+  const locked = booked || held;
   const closed = status === "closed";
   const showBookedCard = booked && (bookedClientFirstName != null || bookedPayout != null);
 
@@ -51,18 +59,21 @@ export function SlotChip({
   return (
     <button
       type="button"
-      disabled={booked}
+      disabled={locked}
       onClick={onClick}
       className={cn(
         "flex min-h-11 flex-col items-center justify-center rounded-full px-3 py-2 text-sm",
-        booked && "cursor-not-allowed bg-surface-warm text-ink-3",
-        closed && !selected && "border border-dashed border-border bg-transparent text-ink-3",
-        !booked && selected && "bg-primary text-white",
-        !booked && !closed && !selected && "border border-border bg-surface text-ink hover:bg-primary-tint",
+        locked && "cursor-not-allowed bg-surface-warm text-ink-3",
+        pendingRemove && "border border-error/40 bg-surface-warm text-error",
+        closed && !selected && !pendingRemove && "border border-dashed border-border bg-transparent text-ink-3",
+        !locked && selected && pending && "border border-primary/40 bg-primary-tint text-primary",
+        !locked && selected && !pending && "bg-primary text-white",
+        !locked && !closed && !selected && "border border-border bg-surface text-ink hover:bg-primary-tint",
       )}
     >
-      <span>{label}</span>
+      <span className={cn(pendingRemove && "line-through decoration-error/70")}>{label}</span>
       {sublabel ? <span className="text-[11px] font-normal opacity-80">{sublabel}</span> : null}
+      {held && !sublabel ? <span className="text-[11px] font-normal opacity-80">Held</span> : null}
     </button>
   );
 }

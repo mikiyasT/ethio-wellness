@@ -53,8 +53,19 @@ function RegisterInner() {
           </div>
         ) : null}
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <TextField label={t("register.name")} name="name" error={errors.name} />
-          <TextField label={t("login.email")} name="email" type="email" error={errors.email} />
+          <TextField
+            label={t("register.name")}
+            name="name"
+            defaultValue={search.get("name") ?? ""}
+            error={errors.name}
+          />
+          <TextField
+            label={t("login.email")}
+            name="email"
+            type="email"
+            defaultValue={search.get("email") ?? ""}
+            error={errors.email}
+          />
           <TextField label={t("login.password")} name="password" type="password" error={errors.password} />
           <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white">
             {t("register.submit")}

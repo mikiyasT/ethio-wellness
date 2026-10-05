@@ -6,6 +6,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
 import { loadProDraftForUser } from "@/lib/pro-draft";
 import { AUTO_APPROVE_PROFESSIONALS } from "@/lib/pro-approval";
+import { guestDisplayName, guestFirstName } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,16 @@ function initialsOf(name: string) {
       .slice(0, 2)
       .toUpperCase() || "?"
   );
+}
+
+function bookingPersonName(booking: DbBooking, clientsById: Record<string, DbUser>) {
+  if (booking.guestFirstName || booking.guestEmail) {
+    return guestDisplayName(booking.guestFirstName ?? "Guest", booking.guestLastName);
+  }
+  if (booking.clientId && clientsById[booking.clientId]) {
+    return clientsById[booking.clientId]!.name;
+  }
+  return "Client";
 }
 
 export default function ProfessionalHomePage() {
@@ -64,7 +75,7 @@ export default function ProfessionalHomePage() {
       setUpcoming(list);
       const map: Record<string, DbUser> = {};
       for (const booking of list) {
-        if (!map[booking.clientId]) {
+        if (booking.clientId && !map[booking.clientId]) {
           const client = await db.users.getById(booking.clientId);
           if (client) map[booking.clientId] = client;
         }
@@ -75,7 +86,7 @@ export default function ProfessionalHomePage() {
   }, [ready, user.userId, user.professionalId, user.name]);
 
   const next = upcoming[0];
-  const nextClient = next ? clientsById[next.clientId] : undefined;
+  const nextName = next ? bookingPersonName(next, clientsById) : undefined;
 
   return (
     <div>
@@ -114,14 +125,14 @@ export default function ProfessionalHomePage() {
         ))}
       </div>
 
-      {next && nextClient ? (
+      {next && nextName ? (
         <section className="mt-8">
           <h2 className="mb-3 text-xl font-semibold">{t("proHome.nextSession")}</h2>
           <div className="space-y-3">
             <SessionCard
-              initials={initialsOf(nextClient.name)}
+              initials={initialsOf(nextName)}
               avatarClass="av-1"
-              title={`${nextClient.name} · ${categoryById(next.specialty)?.name}`}
+              title={`${nextName} · ${categoryById(next.specialty)?.name}`}
               meta={next.dateLabel}
               time="Video call"
               tone="gold"
@@ -146,21 +157,25 @@ export default function ProfessionalHomePage() {
             </div>
           ) : (
             upcoming.map((booking) => {
-              const client = clientsById[booking.clientId];
+              const name = bookingPersonName(booking, clientsById);
+              const isGuest = Boolean(booking.guestEmail) && !booking.clientId;
               return (
                 <article
                   key={booking.id}
                   className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
                 >
                   <div>
-                    <p className="font-semibold">{client?.name}</p>
-                    <p className="text-sm text-ink-2">
-                      {categoryById(booking.specialty)?.name} · {booking.dateLabel}
+                    <p className="font-semibold">
+                      {name}
+                      {isGuest ? (
+                        <span className="ml-2 rounded-full border border-border bg-surface-warm px-2 py-0.5 text-xs font-medium text-ink-2">
+                          Guest
+                        </span>
+                      ) : null}
                     </p>
+                    <p className="text-sm text-ink-2">{booking.dateLabel}</p>
                   </div>
-                  <span className="rounded-full bg-gold-tint px-3 py-1 text-sm text-gold">
-                    {t("sessions.upcoming")}
-                  </span>
+                  <p className="text-sm text-ink-3">{guestFirstName(booking)}</p>
                 </article>
               );
             })

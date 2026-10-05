@@ -17,7 +17,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LanguageSwitcher } from "./language-switcher";
-import { ModeSwitcher } from "./mode-switcher";
 
 function initialsFromName(name?: string, role?: UserRole) {
   if (name?.trim()) {
@@ -77,15 +76,11 @@ export function Header({ role }: { role: UserRole }) {
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
-          <ModeSwitcher />
           <LanguageSwitcher />
           {role === "guest" ? (
             <>
-              <ButtonLink href={routes.login} variant="outline" size="sm" className="hidden sm:inline-flex btn-keep">
+              <ButtonLink href={routes.login} size="sm" className="btn-keep">
                 {t("nav.signIn")}
-              </ButtonLink>
-              <ButtonLink href={routes.register} size="sm" className="btn-keep">
-                {t("nav.createAccount")}
               </ButtonLink>
               <button
                 type="button"
@@ -122,7 +117,11 @@ export function Header({ role }: { role: UserRole }) {
               {t(item.labelKey)}
             </Link>
           ))}
-          <Link href={routes.login} className="block min-h-11 py-2 text-ink" onClick={() => setOpen(false)}>
+          <Link
+            href={routes.login}
+            className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-4 font-semibold text-white"
+            onClick={() => setOpen(false)}
+          >
             {t("nav.signIn")}
           </Link>
         </nav>
