@@ -207,7 +207,7 @@ function ProfessionalsDirectory() {
             <button
               type="button"
               onClick={() => setSheetOpen(false)}
-              className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white"
+              className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-on-primary"
             >
               {t("pros.showResults")} {results.length}
             </button>

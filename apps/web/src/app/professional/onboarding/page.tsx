@@ -78,7 +78,7 @@ export default function ProfessionalOnboardingPage() {
       ) : null}
       <form className="mt-6 space-y-4" onSubmit={(event) => void onSubmit(event)}>
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-on-primary">
             {draft.name
               .split(" ")
               .map((part) => part[0])
@@ -165,7 +165,7 @@ export default function ProfessionalOnboardingPage() {
             ))}
           </div>
         </div>
-        <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-white">
+        <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-on-primary">
           {t("onboard.continue")}
         </button>
       </form>

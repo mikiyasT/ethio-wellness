@@ -298,9 +298,9 @@ function AvailabilityInner() {
                 className={[
                   "relative flex min-h-11 flex-col items-center justify-center rounded-xl text-sm",
                   isPast && "cursor-not-allowed text-ink-3 opacity-40",
-                  !isPast && !isSelected && "text-ink hover:bg-primary-tint",
-                  isSelected && "bg-primary font-semibold text-white",
-                  !isSelected && isToday && "ring-1 ring-primary",
+                  !isPast && !isSelected && "text-ink hover:bg-avail-tint",
+                  isSelected && "bg-avail font-semibold text-white",
+                  !isSelected && isToday && "ring-1 ring-avail",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -308,7 +308,7 @@ function AvailabilityInner() {
                 {parseIsoDate(iso).getDate()}
                 {dayHasOpen ? (
                   <span
-                    className={`mt-0.5 h-1 w-1 rounded-full ${isSelected ? "bg-white" : "bg-primary"}`}
+                    className={`mt-0.5 h-1 w-1 rounded-full ${isSelected ? "bg-white" : "bg-avail"}`}
                   />
                 ) : (
                   <span className="mt-0.5 h-1 w-1" />
@@ -337,10 +337,10 @@ function AvailabilityInner() {
               onClick={() => selectDate(iso)}
               className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-4 text-sm ${
                 selectedDate === iso
-                  ? "bg-primary text-white"
+                  ? "bg-avail text-white"
                   : iso < todayIso
                     ? "cursor-not-allowed border border-border text-ink-3 opacity-50"
-                    : "border border-border bg-surface text-ink"
+                    : "border border-border bg-surface text-ink hover:bg-avail-tint"
               }`}
             >
               {formatDayChip(iso)}
@@ -373,7 +373,7 @@ function AvailabilityInner() {
           {t("proAvail.booked")}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full bg-primary" /> {t("proAvail.selected")}
+          <span className="h-3 w-3 rounded-full bg-avail" /> {t("proAvail.selected")}
         </span>
       </div>
 

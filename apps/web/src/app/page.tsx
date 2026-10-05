@@ -1,129 +1,184 @@
 "use client";
 
-import { LANGUAGES, categories, professionals, routes } from "@ethio-wellness/shared";
-import { CategoryCard } from "@/components/domain/category-card";
-import { ProfessionalCard } from "@/components/domain/professional-card";
+import { routes } from "@ethio-wellness/shared";
 import { ButtonLink } from "@/components/ui/button";
 import { useLocale } from "@/lib/locale";
-import { CalendarDays, Laptop, Search } from "lucide-react";
+import Image from "next/image";
+
+const LANGUAGES_ROWS = [
+  { primary: "አማርኛ", secondary: "Amharic", eth: true, lang: "am" },
+  { primary: "Afaan Oromoo", secondary: "Oromoo", eth: false },
+  { primary: "ትግርኛ", secondary: "Tigrinya", eth: true, lang: "ti" },
+  { primary: "English", secondary: "English", eth: false },
+] as const;
 
 export default function WelcomeHomePage() {
   const { t } = useLocale();
-  const featured = professionals.slice(0, 3);
-  const popular = categories.slice(0, 4);
 
   return (
-    <div>
-      <section className="bg-primary text-white">
-        <div className="mx-auto max-w-[1200px] px-4 py-16 md:py-24">
-          <p className="inline-flex rounded-full bg-white/15 px-3 py-1 text-sm font-semibold">
+    <div className="marketing overflow-hidden">
+      {/* HERO */}
+      <section
+        aria-labelledby="main-title"
+        className="mx-auto grid max-w-[1260px] items-center gap-[clamp(38px,7vw,110px)] px-[clamp(24px,5vw,72px)] pb-[76px] pt-[clamp(52px,8vw,110px)] md:grid-cols-[minmax(0,1.02fr)_minmax(340px,0.98fr)]"
+      >
+        <div className="max-w-[690px]">
+          <p className="mb-6 inline-flex items-center gap-2.5 text-[0.86rem] font-extrabold uppercase tracking-[0.08em] text-teal-accent">
+            <span
+              className="ayzon-pulse-dot inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-primary"
+              aria-hidden
+            />
             {t("home.kicker")}
           </p>
-          <h1 className="mt-5 max-w-3xl text-[32px] font-bold leading-[1.15] md:text-[44px]">
+          <h1
+            id="main-title"
+            className="max-w-[760px] text-[clamp(3.2rem,7.2vw,4.75rem)] font-extrabold leading-[0.94] tracking-[-0.065em] text-ink"
+          >
             {t("home.h1")}
           </h1>
-          <p className="eth mt-4 text-lg text-white/85">{t("home.amharicSub")}</p>
-          <p className="mt-4 max-w-2xl text-lg leading-7 text-white/80">{t("home.sub")}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href={routes.professionals} variant="gold" size="lg">
-              {t("home.ctaProfessionals")}
+          <span className="eth mt-5 block text-[clamp(1.25rem,2vw,1.8rem)] font-bold text-teal-accent" lang="am">
+            {t("home.amharicSub")}
+          </span>
+          <p className="mt-7 max-w-[610px] text-[clamp(1.05rem,1.6vw,1.26rem)] leading-relaxed text-ink-2">
+            {t("home.sub")}
+          </p>
+          <p className="mt-4 text-sm font-semibold text-ink-2">{t("home.guestPromise")}</p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
+            <ButtonLink
+              href={routes.professionals}
+              variant="primary"
+              size="lg"
+              className="rounded-[8px] font-extrabold shadow-[0_10px_25px_rgba(0,0,0,0.18)]"
+            >
+              {t("home.ctaBrowse")}
             </ButtonLink>
-            <ButtonLink href={routes.services} variant="ghost" size="lg">
-              {t("home.ctaServices")}
+            <ButtonLink href={routes.login} variant="text" size="lg" className="font-extrabold">
+              {t("home.ctaSignIn")}
             </ButtonLink>
           </div>
-          <ul className="mt-8 flex flex-col gap-2 text-sm sm:flex-row sm:flex-wrap sm:gap-3">
-            {[t("home.trust1"), t("home.trust2"), t("home.trust3")].map((item) => (
-              <li key={item} className="inline-flex w-fit rounded-full bg-white/10 px-3 py-1.5">
-                ✓ {item}
-              </li>
-            ))}
-          </ul>
+        </div>
+
+        <div
+          className="relative mx-auto h-[clamp(520px,67vw,720px)] min-h-[500px] w-full max-w-[560px] max-h-[720px] justify-self-center md:mx-0 md:max-w-none"
+          aria-label="Ayzon campaign portraits"
+        >
+          <div
+            className="absolute left-[39%] top-[46%] z-0 h-[110px] w-[110px] rounded-full bg-primary opacity-[0.84] max-[520px]:h-[76px] max-[520px]:w-[76px]"
+            aria-hidden
+          >
+            <span className="absolute -left-[55px] top-[62px] h-[90px] w-[220px] rounded-t-full bg-teal-accent opacity-20" />
+          </div>
+          <div className="absolute left-[4%] top-0 z-[1] w-[min(62%,330px)] -rotate-3 overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:left-[1%] max-[520px]:w-[61%] max-[520px]:rounded-[13px]">
+            <Image
+              src="/home/poster-female-v4.png"
+              alt="Ayzon campaign poster featuring a young Ethiopian woman"
+              width={660}
+              height={1174}
+              className="aspect-[9/16] h-auto w-full object-cover"
+              priority
+              sizes="(max-width: 820px) 61vw, 330px"
+            />
+          </div>
+          <div className="absolute bottom-0 right-[-3%] z-[2] w-[min(62%,330px)] origin-[50%_82%] rotate-[9deg] overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:right-0 max-[520px]:w-[61%] max-[520px]:rounded-[13px]">
+            <Image
+              src="/home/poster-male-v4.png"
+              alt="Ayzon campaign poster featuring a young Ethiopian man"
+              width={660}
+              height={1174}
+              className="aspect-[9/16] h-auto w-full object-cover"
+              priority
+              sizes="(max-width: 820px) 61vw, 330px"
+            />
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1200px] px-4 py-16">
-        <p className="text-sm font-semibold uppercase tracking-wide text-gold">{t("home.howTitle")}</p>
-        <h2 className="mt-2 text-[26px] font-bold text-ink md:text-[32px]">{t("home.howHeading")}</h2>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {[
-            { Icon: Search, title: t("home.how1Title"), body: t("home.how1Body") },
-            { Icon: CalendarDays, title: t("home.how2Title"), body: t("home.how2Body") },
-            { Icon: Laptop, title: t("home.how3Title"), body: t("home.how3Body") },
-          ].map(({ Icon, title, body }) => (
-            <div key={title} className="rounded-2xl border border-border bg-surface p-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-tint text-primary">
-                <Icon size={22} />
-              </div>
-              <h3 className="mt-4 text-xl font-semibold">{title}</h3>
-              <p className="mt-2 text-ink-2">{body}</p>
+      {/* HOW IT WORKS */}
+      <section className="bg-primary-dark text-ink" aria-labelledby="how-title">
+        <div className="mx-auto max-w-[1160px] px-[clamp(24px,5vw,64px)] py-[clamp(68px,9vw,110px)]">
+          <h2
+            id="how-title"
+            className="text-[clamp(2.4rem,5vw,3.75rem)] font-extrabold leading-none tracking-[-0.045em] text-ink"
+          >
+            {t("home.howTitle")}
+          </h2>
+          <div className="mt-10 grid gap-0 border-t border-white/20 pt-2 md:grid-cols-3">
+            {[
+              { num: "01", title: t("home.how1Title"), body: t("home.how1Body") },
+              { num: "02", title: t("home.how2Title"), body: t("home.how2Body") },
+              { num: "03", title: t("home.how3Title"), body: t("home.how3Body") },
+            ].map((step, index) => (
+              <article
+                key={step.num}
+                className={`py-8 md:py-10 md:pr-8 ${
+                  index > 0 ? "border-t border-white/20 md:border-l md:border-t-0 md:pl-8" : ""
+                }`}
+              >
+                <span className="text-[0.8rem] font-extrabold tracking-[0.12em] text-primary">{step.num}</span>
+                <h3 className="mt-3.5 text-xl font-bold text-ink">{step.title}</h3>
+                <p className="mt-2 text-[0.95rem] text-white/70">{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* LANGUAGES */}
+      <section
+        aria-labelledby="language-title"
+        className="mx-auto grid max-w-[1160px] items-center gap-[clamp(50px,8vw,110px)] px-[clamp(24px,5vw,64px)] py-[clamp(75px,10vw,130px)] md:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]"
+      >
+        <h2
+          id="language-title"
+          className="text-[clamp(2.5rem,5vw,4rem)] font-extrabold leading-[1.03] tracking-[-0.05em] text-ink"
+        >
+          {t("home.langTitle")}
+        </h2>
+        <div className="grid gap-3" aria-label="Language options">
+          {LANGUAGES_ROWS.map((row) => (
+            <div
+              key={row.primary}
+              className="flex min-h-[74px] items-center justify-between border-b-2 border-border bg-surface px-[22px]"
+            >
+              <strong className={`text-[1.05rem] text-ink ${row.eth ? "eth" : ""}`} {...(row.eth && row.lang ? { lang: row.lang } : {})}>
+                {row.primary}
+              </strong>
+              <span className="text-[0.84rem] font-extrabold text-teal-accent">{row.secondary}</span>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[1200px] px-4 pb-16">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="text-[26px] font-bold text-ink md:text-[32px]">{t("home.popular")}</h2>
-          <ButtonLink href={routes.services} variant="text">
-            {t("home.seeAll")}
-          </ButtonLink>
-        </div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {popular.map((category) => (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              count={professionals.filter((item) => item.specialties.includes(category.id)).length}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="bg-surface-warm">
-        <div className="mx-auto max-w-[1200px] px-4 py-12">
-          <div className="flex flex-wrap items-center gap-2">
-            {LANGUAGES.map((language) => (
-              <span
-                key={language.id}
-                className="rounded-full bg-surface px-3 py-2 text-sm text-ink"
-              >
-                {language.nativeLabel}
-              </span>
-            ))}
-            <span className="rounded-full border border-dashed border-border-strong px-3 py-2 text-sm text-ink-2">
-              {t("home.moreComing")}
-            </span>
+          <div className="flex min-h-[66px] items-center justify-between border border-dashed border-border-strong px-[22px] text-ink-3">
+            <span className="font-semibold">{t("home.langMore")}</span>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1200px] px-4 py-16">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="text-[26px] font-bold text-ink md:text-[32px]">{t("home.featured")}</h2>
-          <ButtonLink href={routes.professionals} variant="text">
-            {t("home.browseAll")}
-          </ButtonLink>
-        </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {featured.map((professional) => (
-            <ProfessionalCard key={professional.id} professional={professional} />
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[1200px] px-4 pb-16">
-        <div className="rounded-3xl bg-primary px-6 py-10 text-white md:px-10">
-          <h2 className="text-[26px] font-bold md:text-[32px]">{t("home.ctaBand")}</h2>
-          <p className="mt-2 max-w-xl text-white/80">{t("home.ctaBandBody")}</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href={routes.register} variant="gold" size="lg">
-              {t("home.createFree")}
-            </ButtonLink>
-            <ButtonLink href={routes.professionals} variant="ghost" size="lg">
-              {t("home.keepBrowsing")}
-            </ButtonLink>
+      {/* CLOSING */}
+      <section
+        aria-labelledby="closing-title"
+        className="mx-auto max-w-[1160px] px-[clamp(24px,5vw,64px)] pb-[100px]"
+      >
+        <div className="relative grid items-center gap-8 overflow-hidden rounded-[14px] border border-border bg-surface p-[clamp(40px,6vw,70px)] md:grid-cols-[1fr_auto]">
+          <div
+            className="pointer-events-none absolute -bottom-[105px] -right-[75px] h-[190px] w-[190px] rounded-full bg-primary opacity-90"
+            aria-hidden
+          />
+          <div className="relative z-[1]">
+            <h2
+              id="closing-title"
+              className="text-[clamp(2rem,4vw,3.25rem)] font-extrabold leading-[1.05] tracking-[-0.04em] text-ink"
+            >
+              {t("home.closeTitle")}
+            </h2>
+            <p className="mt-3.5 max-w-[610px] text-ink-2">{t("home.closeBody")}</p>
           </div>
+          <ButtonLink
+            href={routes.professionals}
+            variant="primary"
+            size="lg"
+            className="relative z-[1] justify-self-start rounded-[8px] font-extrabold whitespace-nowrap"
+          >
+            {t("home.ctaBrowse")}
+          </ButtonLink>
         </div>
       </section>
     </div>

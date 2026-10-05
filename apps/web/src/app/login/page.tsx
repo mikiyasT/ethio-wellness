@@ -157,7 +157,7 @@ function LoginInner() {
           </div>
           <button
             type="submit"
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white hover:bg-primary-hover"
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-on-primary hover:bg-primary-hover"
           >
             {t("login.submit")}
           </button>

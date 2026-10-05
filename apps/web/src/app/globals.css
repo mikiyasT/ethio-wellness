@@ -11,6 +11,8 @@
   --gold: #c08a2d;
   --gold-hover: #a67424;
   --gold-tint: #faf1de;
+  --gold-deep: #e8833a;
+  --teal-accent: #0e7c7b;
   --clay: #b4552d;
   --bg: #faf6ee;
   --surface: #ffffff;
@@ -24,27 +26,49 @@
   --warning: #9a6b1a;
   --error: #b3261e;
   --info: #2456a6;
+  --on-primary: #ffffff;
+  --avail: #1c5c3a;
+  --avail-hover: #154a2e;
+  --avail-tint: #eaf3ed;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface-warm: #21262d;
-  --border: #30363d;
-  --border-strong: #3d444d;
-  --text: #e6edf3;
-  --text-2: #9198a1;
-  --text-3: #6e7681;
-  --primary: #238636;
-  --primary-hover: #2ea043;
-  --primary-dark: #010409;
-  --primary-tint: #21262d;
-  --gold-tint: #21262d;
+  --bg: #092925;
+  --surface: #113a35;
+  --surface-warm: #154842;
+  --border: rgba(244, 238, 221, 0.16);
+  --border-strong: rgba(244, 238, 221, 0.28);
+  --text: #f9f6ed;
+  --text-2: #c5d3cd;
+  --text-3: #8fa3a0;
+  --primary: #f5c35a;
+  --primary-hover: #f6be4a;
+  --primary-dark: #061f1c;
+  --primary-tint: rgba(245, 195, 90, 0.14);
+  --gold: #f6be4a;
+  --gold-hover: #f6be4a;
+  --gold-tint: rgba(245, 195, 90, 0.14);
+  --gold-deep: #f09345;
+  --teal-accent: #72c4ba;
+  --clay: #b4552d;
+  --success: #3fb950;
+  --warning: #9a6b1a;
+  --error: #b3261e;
   --info: #4493f8;
+  /* Dark ink on gold CTAs / BrandMark */
+  --on-primary: #0b332f;
+  /* Pinned availability greens — do not follow --primary */
+  --avail: #238636;
+  --avail-hover: #2ea043;
+  --avail-tint: rgba(35, 134, 54, 0.16);
 }
 
-[data-theme="dark"] .rounded-2xl,
+/* Squash radii in dark theme, except marketing home */
+[data-theme="dark"] .rounded-2xl {
+  border-radius: 6px;
+}
+
 [data-theme="dark"] .rounded-3xl {
   border-radius: 6px;
 }
@@ -53,14 +77,45 @@
   border-radius: 6px;
 }
 
+[data-theme="dark"] .marketing .rounded-2xl {
+  border-radius: 1rem;
+}
+
+[data-theme="dark"] .marketing .rounded-3xl {
+  border-radius: 1.5rem;
+}
+
+[data-theme="dark"] .marketing .rounded-full:not(.keep-round) {
+  border-radius: 9999px;
+}
+
+[data-theme="dark"] .marketing .rounded-\[18px\] {
+  border-radius: 18px;
+}
+
+[data-theme="dark"] .marketing .rounded-\[14px\] {
+  border-radius: 14px;
+}
+
+[data-theme="dark"] .marketing .rounded-\[13px\] {
+  border-radius: 13px;
+}
+
+[data-theme="dark"] .marketing .rounded-\[8px\] {
+  border-radius: 8px;
+}
+
 @theme inline {
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-dark: var(--primary-dark);
   --color-primary-tint: var(--primary-tint);
+  --color-on-primary: var(--on-primary);
   --color-gold: var(--gold);
   --color-gold-hover: var(--gold-hover);
   --color-gold-tint: var(--gold-tint);
+  --color-gold-deep: var(--gold-deep);
+  --color-teal-accent: var(--teal-accent);
   --color-clay: var(--clay);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -74,7 +129,10 @@
   --color-warning: var(--warning);
   --color-error: var(--error);
   --color-info: var(--info);
-  --font-sans: var(--font-inter);
+  --color-avail: var(--avail);
+  --color-avail-hover: var(--avail-hover);
+  --color-avail-tint: var(--avail-tint);
+  --font-sans: var(--font-manrope);
   --font-eth: var(--font-ethiopic);
 }
 
@@ -117,7 +175,7 @@ textarea:focus-visible {
 }
 
 .eth {
-  font-family: var(--font-ethiopic), var(--font-inter), sans-serif;
+  font-family: var(--font-ethiopic), var(--font-manrope), sans-serif;
 }
 
 .icon-moon {
@@ -132,13 +190,53 @@ textarea:focus-visible {
   display: block;
 }
 
-.av-1 { background: #1c5c3a; }
-.av-2 { background: #2456a6; }
-.av-3 { background: #b4552d; }
-.av-4 { background: #c08a2d; }
-.av-5 { background: #0e3a23; }
-.av-6 { background: #154a2e; }
-.av-7 { background: #9a6b1a; }
-.av-8 { background: #2456a6; }
-.av-9 { background: #1c5c3a; }
-.av-10 { background: #5d5347; }
+@keyframes ayzon-pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 195, 90, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 195, 90, 0);
+  }
+}
+
+.ayzon-pulse-dot {
+  animation: ayzon-pulse-dot 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ayzon-pulse-dot {
+    animation: none;
+  }
+}
+
+.av-1 {
+  background: #1c5c3a;
+}
+.av-2 {
+  background: #2456a6;
+}
+.av-3 {
+  background: #b4552d;
+}
+.av-4 {
+  background: #c08a2d;
+}
+.av-5 {
+  background: #0e3a23;
+}
+.av-6 {
+  background: #154a2e;
+}
+.av-7 {
+  background: #9a6b1a;
+}
+.av-8 {
+  background: #2456a6;
+}
+.av-9 {
+  background: #1c5c3a;
+}
+.av-10 {
+  background: #5d5347;
+}

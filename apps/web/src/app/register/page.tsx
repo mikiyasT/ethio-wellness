@@ -67,7 +67,7 @@ function RegisterInner() {
             error={errors.email}
           />
           <TextField label={t("login.password")} name="password" type="password" error={errors.password} />
-          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-white">
+          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary font-semibold text-on-primary">
             {t("register.submit")}
           </button>
         </form>

@@ -7,7 +7,7 @@ export default function LoadingPage() {
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
-      <div className="keep-round flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
+      <div className="keep-round flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-on-primary">
         AZ
       </div>
       <p className="mt-4 text-xl font-semibold text-ink">{t("brand")}</p>
