@@ -45,7 +45,7 @@ export default function ClientOnboardingPage() {
         <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-primary font-semibold text-on-primary">
           {t("onboard.continue")}
         </button>
-        <Link href={routes.clientHome} className="block text-center text-primary">
+        <Link href={routes.clientHome} className="block text-center text-teal-accent hover:underline">
           {t("onboard.skip")}
         </Link>
       </form>

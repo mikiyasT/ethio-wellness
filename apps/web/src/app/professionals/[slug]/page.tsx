@@ -7,12 +7,21 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Tag } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  calendarCells,
+  formatDayChip,
+  formatMonthTitle,
+  hasOpenSlots,
+  hoursForDate,
+  parseIsoDate,
+  toIsoDate,
+} from "@/lib/availability-editor";
 import { bookPath } from "@/lib/booking";
 import { db, formatFee, toCardProfessional, type DbProfessional, type DbSlot } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { trackPixel } from "@/lib/pixel";
 import { useSession } from "@/lib/session";
-import { Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -22,8 +31,15 @@ export default function ProfessionalDetailPage() {
   const router = useRouter();
   const { role, user } = useSession();
   const params = useParams<{ slug: string }>();
+  const todayIso = useMemo(() => toIsoDate(new Date()), []);
+
   const [dbPro, setDbPro] = useState<DbProfessional | null | undefined>(undefined);
   const [slots, setSlots] = useState<DbSlot[]>([]);
+  const [selectedDate, setSelectedDate] = useState(todayIso);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
   const [selected, setSelected] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -40,28 +56,47 @@ export default function ProfessionalDetailPage() {
       }
       setDbPro(found);
       const list = await db.slots.listForProfessional(found.id);
-      const visible = list.filter(
-        (slot) => slot.status === "open" || slot.status === "booked" || slot.status === "held",
+      setSlots(list);
+      const firstOpen =
+        list.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso ?? todayIso;
+      setSelectedDate(firstOpen);
+      const d = parseIsoDate(firstOpen);
+      setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
+      const firstOpenSlot = list.find(
+        (slot) => slot.status === "open" && slot.dateIso === firstOpen,
       );
-      setSlots(visible);
-      setSelected(visible.find((slot) => slot.status === "open")?.id ?? "");
+      setSelected(firstOpenSlot?.id ?? "");
     })();
-  }, [params.slug]);
+  }, [params.slug, todayIso]);
 
   const professional = useMemo(
     () => (dbPro ? toCardProfessional(dbPro) : null),
     [dbPro],
   );
 
-  const grouped = useMemo(
-    () =>
-      slots.reduce<Record<string, DbSlot[]>>((acc, slot) => {
-        acc[slot.dayLabel] ??= [];
-        acc[slot.dayLabel].push(slot);
-        return acc;
-      }, {}),
-    [slots],
+  const dayOpenSlots = useMemo(() => {
+    if (!dbPro) return [];
+    return hoursForDate(selectedDate, slots, dbPro.id).filter((slot) => slot.status === "open");
+  }, [dbPro, selectedDate, slots]);
+
+  const cells = useMemo(
+    () => calendarCells(viewMonth.year, viewMonth.month),
+    [viewMonth.year, viewMonth.month],
   );
+  const hasAnyOpen = useMemo(
+    () => slots.some((slot) => slot.status === "open" && slot.dateIso >= todayIso),
+    [slots, todayIso],
+  );
+
+  useEffect(() => {
+    if (dayOpenSlots.length === 0) {
+      setSelected("");
+      return;
+    }
+    if (!dayOpenSlots.some((slot) => slot.id === selected)) {
+      setSelected(dayOpenSlots[0]!.id);
+    }
+  }, [dayOpenSlots, selected]);
 
   if (dbPro === undefined) {
     return <div className="p-8 text-ink-2">Loading…</div>;
@@ -80,8 +115,29 @@ export default function ProfessionalDetailPage() {
     );
   }
 
-  const selectedSlot = slots.find((slot) => slot.id === selected);
+  const selectedSlot = slots.find((slot) => slot.id === selected && slot.status === "open");
   const bookNextHref = selectedSlot ? bookPath(professional.slug, selectedSlot.id) : routes.clientBook;
+
+  function selectDate(iso: string) {
+    if (iso < todayIso) return;
+    setSelectedDate(iso);
+    setError("");
+    const d = parseIsoDate(iso);
+    setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
+  }
+
+  function shiftMonth(delta: number) {
+    setViewMonth((current) => {
+      const date = new Date(current.year, current.month + delta, 1);
+      return { year: date.getFullYear(), month: date.getMonth() };
+    });
+  }
+
+  async function reloadSlots() {
+    if (!dbPro) return;
+    const list = await db.slots.listForProfessional(dbPro.id);
+    setSlots(list);
+  }
 
   async function startHoldAndBook() {
     if (!selectedSlot || !dbPro || !professional || selectedSlot.status !== "open") return;
@@ -99,12 +155,7 @@ export default function ProfessionalDetailPage() {
     } catch (err) {
       setBusy(false);
       setError(err instanceof Error ? err.message : "Could not hold this slot. Try another time.");
-      const list = await db.slots.listForProfessional(dbPro.id);
-      setSlots(
-        list.filter(
-          (slot) => slot.status === "open" || slot.status === "booked" || slot.status === "held",
-        ),
-      );
+      await reloadSlots();
     }
   }
 
@@ -122,7 +173,8 @@ export default function ProfessionalDetailPage() {
     <div className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="text-xl font-semibold">{t("detail.availability")}</h2>
       <p className="mt-1 text-sm text-ink-3">{t("detail.hourNote")}</p>
-      {slots.length === 0 ? (
+
+      {!hasAnyOpen ? (
         <div className="mt-4">
           <EmptyState
             title={t("detail.emptyTitle")}
@@ -133,22 +185,93 @@ export default function ProfessionalDetailPage() {
         </div>
       ) : (
         <div className="mt-4 space-y-4">
-          {Object.entries(grouped).map(([day, daySlots]) => (
-            <div key={day}>
-              <p className="mb-2 font-medium">{day}</p>
-              <div className="flex flex-wrap gap-2">
-                {daySlots.map((slot) => (
+          <section className="rounded-xl border border-border bg-bg/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                aria-label="Previous month"
+                onClick={() => shiftMonth(-1)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-ink hover:bg-surface-warm"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <h3 className="text-sm font-semibold text-ink">
+                {formatMonthTitle(new Date(viewMonth.year, viewMonth.month, 1))}
+              </h3>
+              <button
+                type="button"
+                aria-label="Next month"
+                onClick={() => shiftMonth(1)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-ink hover:bg-surface-warm"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+            <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-ink-3">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                <div key={d} className="py-1">
+                  {d}
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 grid grid-cols-7 gap-1">
+              {cells.map((iso, index) => {
+                if (!iso) return <div key={`pad-${index}`} />;
+                const isPast = iso < todayIso;
+                const isSelected = iso === selectedDate;
+                const isToday = iso === todayIso;
+                const dayHasOpen = hasOpenSlots(hoursForDate(iso, slots, dbPro.id));
+                return (
+                  <button
+                    key={iso}
+                    type="button"
+                    disabled={isPast}
+                    onClick={() => selectDate(iso)}
+                    className={[
+                      "relative flex min-h-10 flex-col items-center justify-center rounded-xl text-sm",
+                      isPast && "cursor-not-allowed text-ink-3 opacity-40",
+                      !isPast && !isSelected && "text-ink hover:bg-primary-tint",
+                      isSelected && "bg-primary font-semibold text-on-primary",
+                      !isSelected && isToday && "ring-1 ring-primary",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    {parseIsoDate(iso).getDate()}
+                    {dayHasOpen ? (
+                      <span
+                        className={`mt-0.5 h-1 w-1 rounded-full ${isSelected ? "bg-on-primary" : "bg-primary"}`}
+                      />
+                    ) : (
+                      <span className="mt-0.5 h-1 w-1" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <div>
+            <p className="text-sm font-medium text-ink">
+              {t("detail.slotsFor")} {formatDayChip(selectedDate)}
+            </p>
+            {dayOpenSlots.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-2">{t("detail.noSlotsDay")}</p>
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {dayOpenSlots.map((slot) => (
                   <SlotChip
                     key={slot.id}
                     label={slot.timeLabel}
-                    status={slot.status}
+                    status="open"
                     selected={selected === slot.id}
-                    onClick={() => slot.status === "open" && setSelected(slot.id)}
+                    onClick={() => setSelected(slot.id)}
                   />
                 ))}
               </div>
-            </div>
-          ))}
+            )}
+          </div>
+
           {error ? <p className="text-sm text-error">{error}</p> : null}
           <Button
             disabled={!selectedSlot || selectedSlot.status !== "open" || busy}
@@ -165,14 +288,21 @@ export default function ProfessionalDetailPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-10">
-      <Link href={routes.professionals} className="text-sm text-primary">
+    <div className="mx-auto w-full max-w-[1200px] px-4 py-10">
+      <Link href={routes.professionals} className="text-sm text-teal-accent hover:underline">
         ← {t("detail.back")}
       </Link>
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_340px]">
+      <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div>
           <div className="flex items-start gap-4">
-            <Avatar initials={professional.initials} avatarClass={professional.avatarClass} size="lg" />
+            <Avatar
+              initials={professional.initials}
+              avatarClass={professional.avatarClass}
+              photoUrl={professional.photoUrl}
+              name={professional.name}
+              size="lg"
+              shape="rounded"
+            />
             <div>
               <h1 className="text-3xl font-bold text-ink">{professional.name}</h1>
               <p className="text-ink-2">

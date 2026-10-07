@@ -94,13 +94,20 @@ export default function JoinRecoveryPage() {
     const whenLocal = formatBookerLocal(booking.slotAt);
     return (
       <div className="mx-auto max-w-xl px-4 py-12">
-        <p className="text-sm font-medium text-primary">{t("join.lobbyTitle")}</p>
+        <p className="text-sm font-medium text-teal-accent">{t("join.lobbyTitle")}</p>
         <h1 className="mt-2 text-3xl font-bold text-ink sm:text-4xl">{professional.name}</h1>
         <p className="mt-2 text-ink-2">{t("join.lobbySub")}</p>
 
         <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
           <div className="flex items-center gap-3">
-            <Avatar initials={professional.initials} avatarClass={professional.avatarClass} size="lg" />
+            <Avatar
+              initials={professional.initials}
+              avatarClass={professional.avatarClass}
+              photoUrl={professional.photoUrl}
+              name={professional.name}
+              size="lg"
+              shape="rounded"
+            />
             <div>
               <p className="text-xl font-semibold text-ink">{professional.name}</p>
               <p className="text-ink-2">{categoryById(booking.specialty)?.name}</p>

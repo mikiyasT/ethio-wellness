@@ -16,11 +16,11 @@ export default function WelcomeHomePage() {
   const { t } = useLocale();
 
   return (
-    <div className="marketing overflow-hidden">
+    <div className="marketing w-full max-w-[100vw] overflow-x-clip">
       {/* HERO */}
       <section
         aria-labelledby="main-title"
-        className="mx-auto grid max-w-[1260px] items-center gap-[clamp(38px,7vw,110px)] px-[clamp(24px,5vw,72px)] pb-[76px] pt-[clamp(52px,8vw,110px)] md:grid-cols-[minmax(0,1.02fr)_minmax(340px,0.98fr)]"
+        className="mx-auto grid w-full max-w-[1260px] items-center gap-[clamp(38px,7vw,110px)] px-4 pb-[76px] pt-[clamp(52px,8vw,110px)] sm:px-[clamp(24px,5vw,72px)] md:grid-cols-[minmax(0,1.02fr)_minmax(280px,0.98fr)]"
       >
         <div className="max-w-[690px]">
           <p className="mb-6 inline-flex items-center gap-2.5 text-[0.86rem] font-extrabold uppercase tracking-[0.08em] text-teal-accent">
@@ -59,7 +59,7 @@ export default function WelcomeHomePage() {
         </div>
 
         <div
-          className="relative mx-auto h-[clamp(520px,67vw,720px)] min-h-[500px] w-full max-w-[560px] max-h-[720px] justify-self-center md:mx-0 md:max-w-none"
+          className="relative mx-auto h-[clamp(480px,64vw,720px)] min-h-[460px] w-full max-w-[560px] max-h-[720px] justify-self-center overflow-hidden md:mx-0 md:max-w-none"
           aria-label="Ayzon campaign portraits"
         >
           <div
@@ -68,7 +68,7 @@ export default function WelcomeHomePage() {
           >
             <span className="absolute -left-[55px] top-[62px] h-[90px] w-[220px] rounded-t-full bg-teal-accent opacity-20" />
           </div>
-          <div className="absolute left-[4%] top-0 z-[1] w-[min(62%,330px)] -rotate-3 overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:left-[1%] max-[520px]:w-[61%] max-[520px]:rounded-[13px]">
+          <div className="absolute left-[4%] top-0 z-[1] w-[min(62%,330px)] -rotate-3 overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:left-[2%] max-[520px]:w-[58%] max-[520px]:rounded-[13px]">
             <Image
               src="/home/poster-female-v4.jpg"
               alt="Ayzon campaign poster featuring a young Ethiopian woman"
@@ -76,10 +76,10 @@ export default function WelcomeHomePage() {
               height={1174}
               className="aspect-[9/16] h-auto w-full object-cover"
               priority
-              sizes="(max-width: 820px) 61vw, 330px"
+              sizes="(max-width: 820px) 58vw, 330px"
             />
           </div>
-          <div className="absolute bottom-0 right-[-3%] z-[2] w-[min(62%,330px)] origin-[50%_82%] rotate-[9deg] overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:right-0 max-[520px]:w-[61%] max-[520px]:rounded-[13px]">
+          <div className="absolute bottom-0 right-[2%] z-[2] w-[min(62%,330px)] origin-[50%_82%] rotate-[9deg] overflow-hidden rounded-[18px] shadow-[0_24px_65px_rgba(0,0,0,0.34)] max-[520px]:right-[1%] max-[520px]:w-[58%] max-[520px]:rounded-[13px]">
             <Image
               src="/home/poster-male-v4.jpg"
               alt="Ayzon campaign poster featuring a young Ethiopian man"
@@ -87,22 +87,22 @@ export default function WelcomeHomePage() {
               height={1174}
               className="aspect-[9/16] h-auto w-full object-cover"
               priority
-              sizes="(max-width: 820px) 61vw, 330px"
+              sizes="(max-width: 820px) 58vw, 330px"
             />
           </div>
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="bg-primary-dark text-ink" aria-labelledby="how-title">
-        <div className="mx-auto max-w-[1160px] px-[clamp(24px,5vw,64px)] py-[clamp(68px,9vw,110px)]">
+      <section className="bg-surface text-ink" aria-labelledby="how-title">
+        <div className="mx-auto w-full max-w-[1160px] px-4 py-[clamp(68px,9vw,110px)] sm:px-[clamp(24px,5vw,64px)]">
           <h2
             id="how-title"
             className="text-[clamp(2.4rem,5vw,3.75rem)] font-extrabold leading-none tracking-[-0.045em] text-ink"
           >
             {t("home.howTitle")}
           </h2>
-          <div className="mt-10 grid gap-0 border-t border-white/20 pt-2 md:grid-cols-3">
+          <div className="mt-10 grid gap-0 border-t border-border pt-2 md:grid-cols-3">
             {[
               { num: "01", title: t("home.how1Title"), body: t("home.how1Body") },
               { num: "02", title: t("home.how2Title"), body: t("home.how2Body") },
@@ -111,12 +111,12 @@ export default function WelcomeHomePage() {
               <article
                 key={step.num}
                 className={`py-8 md:py-10 md:pr-8 ${
-                  index > 0 ? "border-t border-white/20 md:border-l md:border-t-0 md:pl-8" : ""
+                  index > 0 ? "border-t border-border md:border-l md:border-t-0 md:pl-8" : ""
                 }`}
               >
-                <span className="text-[0.8rem] font-extrabold tracking-[0.12em] text-primary">{step.num}</span>
+                <span className="text-[0.8rem] font-extrabold tracking-[0.12em] text-teal-accent">{step.num}</span>
                 <h3 className="mt-3.5 text-xl font-bold text-ink">{step.title}</h3>
-                <p className="mt-2 text-[0.95rem] text-white/70">{step.body}</p>
+                <p className="mt-2 text-[0.95rem] text-ink-2">{step.body}</p>
               </article>
             ))}
           </div>
@@ -126,7 +126,7 @@ export default function WelcomeHomePage() {
       {/* LANGUAGES */}
       <section
         aria-labelledby="language-title"
-        className="mx-auto grid max-w-[1160px] items-center gap-[clamp(50px,8vw,110px)] px-[clamp(24px,5vw,64px)] py-[clamp(75px,10vw,130px)] md:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]"
+        className="mx-auto grid w-full max-w-[1160px] items-center gap-[clamp(50px,8vw,110px)] px-4 py-[clamp(75px,10vw,130px)] sm:px-[clamp(24px,5vw,64px)] md:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]"
       >
         <h2
           id="language-title"
@@ -155,7 +155,7 @@ export default function WelcomeHomePage() {
       {/* CLOSING */}
       <section
         aria-labelledby="closing-title"
-        className="mx-auto max-w-[1160px] px-[clamp(24px,5vw,64px)] pb-[100px]"
+        className="mx-auto w-full max-w-[1160px] px-4 pb-[100px] sm:px-[clamp(24px,5vw,64px)]"
       >
         <div className="relative grid items-center gap-8 overflow-hidden rounded-[14px] border border-border bg-surface p-[clamp(40px,6vw,70px)] md:grid-cols-[1fr_auto]">
           <div

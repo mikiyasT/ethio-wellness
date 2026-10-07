@@ -3,6 +3,7 @@
 import { LANGUAGES, routes, type LanguageId, type Professional } from "@ethio-wellness/shared";
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { Alert } from "@/components/ui/alert";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { TextAreaField, TextField } from "@/components/ui/field";
 import { db, toCardProfessional } from "@/lib/db";
@@ -131,12 +132,17 @@ export default function ProfessionalProfilePage() {
 
       <div className="mt-6 space-y-4 rounded-2xl border border-border bg-surface p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-on-primary">
-            {preview.initials}
-          </div>
+          <Avatar
+            initials={preview.initials}
+            avatarClass={preview.avatarClass}
+            photoUrl={preview.photoUrl}
+            name={preview.name}
+            size="lg"
+            shape="rounded"
+          />
           <div>
             <p className="text-sm font-medium">{t("proOnboard.photo")}</p>
-            <button type="button" className="mt-1 text-sm text-primary hover:underline">
+            <button type="button" className="mt-1 text-sm text-teal-accent hover:underline">
               {t("proOnboard.changePhoto")}
             </button>
           </div>
@@ -205,10 +211,10 @@ export default function ProfessionalProfilePage() {
         <ProfessionalCard professional={preview} />
       </div>
       <div className="mt-4 flex flex-wrap gap-3">
-        <a href={routes.professionalSpecialties} className="text-sm text-primary hover:underline">
+        <a href={routes.professionalSpecialties} className="text-sm text-teal-accent hover:underline">
           {t("proProfile.specialties")}
         </a>
-        <a href={routes.professionalAvailability} className="text-sm text-primary hover:underline">
+        <a href={routes.professionalAvailability} className="text-sm text-teal-accent hover:underline">
           {t("proProfile.availability")}
         </a>
       </div>

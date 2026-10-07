@@ -19,7 +19,7 @@ export default function ServicesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-12">
+    <div className="mx-auto w-full max-w-[1200px] px-4 py-12">
       <h1 className="max-w-3xl text-[32px] font-bold leading-tight text-ink md:text-[40px]">{t("services.title")}</h1>
       <p className="mt-3 text-ink-2">{t("services.sub")}</p>
       <label className="relative mt-6 block max-w-xl">
@@ -48,7 +48,7 @@ export default function ServicesPage() {
       )}
       <div className="mt-8 rounded-2xl border border-dashed border-border-strong bg-surface p-8 text-center">
         <p className="font-semibold text-ink">{t("services.more")}</p>
-        <a href="mailto:hello@ayzoncare.com" className="mt-3 inline-flex min-h-11 items-center text-primary">
+        <a href="mailto:hello@ayzoncare.com" className="mt-3 inline-flex min-h-11 items-center text-teal-accent hover:underline">
           {t("services.request")}
         </a>
       </div>

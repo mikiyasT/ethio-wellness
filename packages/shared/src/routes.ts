@@ -32,12 +32,14 @@ export const routes = {
 
 export const guestNav: { href: string; labelKey: CopyKey }[] = [
   { href: routes.home, labelKey: "nav.home" },
+  { href: routes.join, labelKey: "nav.join" },
   { href: routes.services, labelKey: "nav.services" },
   { href: routes.professionals, labelKey: "nav.professionals" },
 ];
 
 export const clientNav: { href: string; labelKey: CopyKey }[] = [
   { href: routes.clientHome, labelKey: "nav.home" },
+  { href: routes.join, labelKey: "nav.join" },
   { href: routes.services, labelKey: "nav.services" },
   { href: routes.professionals, labelKey: "nav.professionals" },
   { href: routes.clientSessions, labelKey: "nav.mySessions" },
@@ -52,6 +54,7 @@ export const professionalNav: { href: string; labelKey: CopyKey }[] = [
 
 export const clientSidebar: { href: string; labelKey: CopyKey }[] = [
   { href: routes.clientHome, labelKey: "nav.home" },
+  { href: routes.join, labelKey: "nav.join" },
   { href: routes.services, labelKey: "nav.services" },
   { href: routes.professionals, labelKey: "nav.professionals" },
   { href: routes.clientSessions, labelKey: "nav.mySessions" },
@@ -69,7 +72,7 @@ export const professionalSidebar: { href: string; labelKey: CopyKey }[] = [
 
 export const clientMobileNav: { href: string; labelKey: CopyKey }[] = [
   { href: routes.clientHome, labelKey: "nav.home" },
-  { href: routes.services, labelKey: "nav.services" },
+  { href: routes.join, labelKey: "nav.join" },
   { href: routes.professionals, labelKey: "nav.professionals" },
   { href: routes.clientSessions, labelKey: "nav.sessions" },
   { href: routes.account, labelKey: "nav.account" },

@@ -73,7 +73,7 @@ function RegisterInner() {
         </form>
         <p className="mt-4 text-sm text-ink-3">{t("register.terms")}</p>
         <p className="mt-4 text-sm">
-          <Link href={loginHref} className="text-primary">
+          <Link href={loginHref} className="text-teal-accent hover:underline">
             {t("register.hasAccount")}
           </Link>
         </p>

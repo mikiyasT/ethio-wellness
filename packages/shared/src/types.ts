@@ -31,6 +31,8 @@ export interface Professional {
   id: string;
   slug: string;
   initials: string;
+  /** Public path to profile photo, e.g. `/professionals/hana-tesfaye.jpg`. */
+  photoUrl?: string;
   avatarClass: `av-${number}`;
   name: string;
   title: string;
@@ -39,7 +41,6 @@ export interface Professional {
   specialties: CategoryId[];
   rating: number;
   reviewCount: number;
-  nextSlotLabel: string;
   bio: string;
   /** Pilot: new professionals wait for manual approval before practicing. */
   status?: "pending" | "approved";

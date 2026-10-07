@@ -11,6 +11,7 @@ export function SlotChip({
   onClick,
   bookedClientFirstName,
   bookedPayout,
+  size = "md",
 }: {
   label: string;
   sublabel?: string;
@@ -25,12 +26,15 @@ export function SlotChip({
   bookedClientFirstName?: string;
   /** Provider availability: payout line, e.g. "+$25" */
   bookedPayout?: string;
+  /** `sm` = compact chips for full-day grids */
+  size?: "sm" | "md";
 }) {
   const booked = status === "booked";
   const held = status === "held";
   const locked = booked || held;
   const closed = status === "closed";
   const showBookedCard = booked && (bookedClientFirstName != null || bookedPayout != null);
+  const compact = size === "sm";
 
   if (showBookedCard) {
     const clientLine = bookedClientFirstName
@@ -40,18 +44,35 @@ export function SlotChip({
       <div
         role="status"
         aria-label={`${label}, ${clientLine}${bookedPayout ? `, ${bookedPayout}` : ""}`}
-        className="relative flex min-h-11 flex-col items-center justify-center gap-0 rounded-2xl px-3 py-2 text-center text-sm text-[#1A1208]"
+        className={cn(
+          "relative flex flex-col items-center justify-center gap-0 text-center text-booked-ink",
+          compact
+            ? "min-h-8 rounded-xl px-1.5 py-1 text-[11px]"
+            : "min-h-11 rounded-2xl px-3 py-2 text-sm",
+        )}
         style={{
-          background: "linear-gradient(135deg, #F6BE4A 0%, #E8833A 100%)",
+          background: "linear-gradient(135deg, var(--booked-from) 0%, var(--booked-to) 100%)",
         }}
       >
         {bookedPayout ? (
-          <span className="absolute right-2 top-1.5 text-[11px] font-semibold leading-none text-white">
+          <span
+            className={cn(
+              "absolute font-semibold leading-none text-white",
+              compact ? "right-1 top-0.5 text-[9px]" : "right-2 top-1.5 text-[11px]",
+            )}
+          >
             {bookedPayout}
           </span>
         ) : null}
-        <span className="px-8 font-semibold leading-tight">{label}</span>
-        <span className="px-8 text-[11px] font-medium leading-tight opacity-90">{clientLine}</span>
+        <span className={cn("font-semibold leading-tight", compact ? "px-3" : "px-8")}>{label}</span>
+        <span
+          className={cn(
+            "font-medium leading-tight opacity-90",
+            compact ? "px-3 text-[9px]" : "px-8 text-[11px]",
+          )}
+        >
+          {clientLine}
+        </span>
       </div>
     );
   }
@@ -62,7 +83,10 @@ export function SlotChip({
       disabled={locked}
       onClick={onClick}
       className={cn(
-        "flex min-h-11 flex-col items-center justify-center rounded-full px-3 py-2 text-sm",
+        "flex flex-col items-center justify-center",
+        compact
+          ? "min-h-8 rounded-xl px-1.5 py-1 text-[11px] leading-tight"
+          : "min-h-11 rounded-full px-3 py-2 text-sm",
         locked && "cursor-not-allowed bg-surface-warm text-ink-3",
         pendingRemove && "border border-error/40 bg-surface-warm text-error",
         closed && !selected && !pendingRemove && "border border-dashed border-border bg-transparent text-ink-3",
@@ -72,8 +96,16 @@ export function SlotChip({
       )}
     >
       <span className={cn(pendingRemove && "line-through decoration-error/70")}>{label}</span>
-      {sublabel ? <span className="text-[11px] font-normal opacity-80">{sublabel}</span> : null}
-      {held && !sublabel ? <span className="text-[11px] font-normal opacity-80">Held</span> : null}
+      {sublabel ? (
+        <span className={cn("font-normal opacity-80", compact ? "text-[9px]" : "text-[11px]")}>
+          {sublabel}
+        </span>
+      ) : null}
+      {held && !sublabel ? (
+        <span className={cn("font-normal opacity-80", compact ? "text-[9px]" : "text-[11px]")}>
+          Held
+        </span>
+      ) : null}
     </button>
   );
 }

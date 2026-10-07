@@ -5,9 +5,7 @@ import { SlotChip } from "@/components/domain/slot-chip";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
 import {
-  addDays,
   calendarCells,
-  dayChipRange,
   formatDayChip,
   formatMonthTitle,
   hasOpenSlots,
@@ -49,7 +47,6 @@ function AvailabilityInner() {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
-  const [chipStart, setChipStart] = useState(todayIso);
   const [savedMsg, setSavedMsg] = useState(false);
   const [info, setInfo] = useState("");
   const [confirmCloseDay, setConfirmCloseDay] = useState(false);
@@ -106,7 +103,6 @@ function AvailabilityInner() {
       const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso;
       const start = firstOpen ?? todayIso;
       setSelectedDate(start);
-      setChipStart(start);
       const d = parseIsoDate(start);
       setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
     })();
@@ -119,7 +115,6 @@ function AvailabilityInner() {
   const openCount = daySlots.filter((slot) => slot.status === "open").length;
   const bookedCount = daySlots.filter((slot) => slot.status === "booked").length;
   const showEmptyHint = openCount === 0 && bookedCount === 0;
-  const chips = dayChipRange(chipStart, 7);
   const cells = calendarCells(viewMonth.year, viewMonth.month);
   const dirty = serializeSlots(slots) !== serializeSlots(baselineSlots);
 
@@ -131,9 +126,6 @@ function AvailabilityInner() {
     setConfirmCloseDay(false);
     const d = parseIsoDate(iso);
     setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
-    if (iso < chipStart || iso > addDays(chipStart, 6)) {
-      setChipStart(iso);
-    }
   }
 
   function applySlotStatus(slot: DbSlot, nextStatus: SlotStatus) {
@@ -247,7 +239,7 @@ function AvailabilityInner() {
           {" · "}
           {t("proOnboard.stepSpecialties")}
           {" · "}
-          <span className="text-primary">{t("proOnboard.stepAvailability")}</span>
+          <span className="text-teal-accent">{t("proOnboard.stepAvailability")}</span>
         </p>
       ) : null}
       <h1 className="mt-2 text-3xl font-bold text-ink">{t("proAvail.title")}</h1>
@@ -319,44 +311,6 @@ function AvailabilityInner() {
         </div>
       </section>
 
-      <div className="mt-4 flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Earlier days"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border"
-          onClick={() => setChipStart(addDays(chipStart, -7))}
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <div className="flex flex-1 gap-2 overflow-x-auto pb-1">
-          {chips.map((iso) => (
-            <button
-              key={iso}
-              type="button"
-              disabled={iso < todayIso}
-              onClick={() => selectDate(iso)}
-              className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-4 text-sm ${
-                selectedDate === iso
-                  ? "bg-avail text-white"
-                  : iso < todayIso
-                    ? "cursor-not-allowed border border-border text-ink-3 opacity-50"
-                    : "border border-border bg-surface text-ink hover:bg-avail-tint"
-              }`}
-            >
-              {formatDayChip(iso)}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          aria-label="Later days"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border"
-          onClick={() => setChipStart(addDays(chipStart, 7))}
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
-
       <p className="mt-4 text-sm font-medium text-ink">
         {t("proAvail.slotsFor")} {formatDayChip(selectedDate)}
       </p>
@@ -368,7 +322,7 @@ function AvailabilityInner() {
         <span className="inline-flex items-center gap-2">
           <span
             className="h-3 w-3 rounded-full"
-            style={{ background: "linear-gradient(135deg, #F6BE4A 0%, #E8833A 100%)" }}
+            style={{ background: "linear-gradient(135deg, var(--booked-from) 0%, var(--booked-to) 100%)" }}
           />{" "}
           {t("proAvail.booked")}
         </span>
@@ -384,7 +338,7 @@ function AvailabilityInner() {
         </div>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-3 items-stretch gap-2 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-4 items-stretch gap-1.5 sm:grid-cols-6">
         {daySlots.map((slot) => {
           const bookedMeta = slot.status === "booked" ? bookedMetaBySlotId[slot.id] : undefined;
           const baseline = baselineSlots.find(
@@ -396,6 +350,7 @@ function AvailabilityInner() {
           return (
             <SlotChip
               key={slot.id}
+              size="sm"
               label={slot.timeLabel}
               sublabel={
                 pendingRemoveSlot

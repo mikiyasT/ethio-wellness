@@ -58,7 +58,7 @@ function SpecialtiesInner() {
         <p className="text-sm font-medium text-ink-2">
           {t("proOnboard.stepAbout")}
           {" · "}
-          <span className="text-primary">{t("proOnboard.stepSpecialties")}</span>
+          <span className="text-teal-accent">{t("proOnboard.stepSpecialties")}</span>
           {" · "}
           {t("proOnboard.stepAvailability")}
         </p>

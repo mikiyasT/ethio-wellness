@@ -3,14 +3,14 @@
 import { clientMobileNav, professionalMobileNav, type UserRole } from "@ethio-wellness/shared";
 import { cn } from "@/lib/cn";
 import { useLocale } from "@/lib/locale";
-import { CalendarDays, Clock3, Home, Settings, Sparkles, UserRound, Users } from "lucide-react";
+import { CalendarDays, Clock3, Home, Settings, UserRound, Users, Video } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 
 const icons: Record<string, LucideIcon> = {
   "/client": Home,
-  "/services": Sparkles,
+  "/join": Video,
   "/professionals": Users,
   "/client/sessions": CalendarDays,
   "/account": Settings,
@@ -38,7 +38,7 @@ export function BottomNav({ role }: { role: UserRole }) {
               href={item.href}
               className={cn(
                 "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-center text-[11px]",
-                active ? "font-semibold text-primary" : "text-ink-2",
+                active ? "font-semibold text-teal-accent" : "text-ink-2",
               )}
             >
               <Icon size={18} />

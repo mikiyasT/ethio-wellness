@@ -96,13 +96,13 @@ export default function ProfessionalHomePage() {
       <section className="mt-6 rounded-2xl border border-border bg-surface p-5">
         <h2 className="font-semibold text-ink">{t("proHome.checklistTitle")}</h2>
         <ul className="mt-3 space-y-2 text-sm">
-          <li className={checklist.about ? "text-primary" : "text-ink-2"}>
+          <li className={checklist.about ? "text-teal-accent" : "text-ink-2"}>
             {checklist.about ? "✓" : "○"} {t("proHome.checklistAbout")}
           </li>
-          <li className={checklist.specs ? "text-primary" : "text-ink-2"}>
+          <li className={checklist.specs ? "text-teal-accent" : "text-ink-2"}>
             {checklist.specs ? "✓" : "○"} {t("proHome.checklistSpecs")}
           </li>
-          <li className={checklist.avail ? "text-primary" : "text-ink-2"}>
+          <li className={checklist.avail ? "text-teal-accent" : "text-ink-2"}>
             {checklist.avail ? "✓" : "○"} {t("proHome.checklistAvail")}
           </li>
         </ul>

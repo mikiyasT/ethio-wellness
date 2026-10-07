@@ -46,6 +46,8 @@ export default function ClientHomePage() {
           <SessionCard
             initials={professional.initials}
             avatarClass={professional.avatarClass}
+            photoUrl={professional.photoUrl}
+            name={professional.name}
             title={`${professional.name} · ${categoryById(next.specialty)?.name}`}
             meta={next.dateLabel}
             time="Video call"

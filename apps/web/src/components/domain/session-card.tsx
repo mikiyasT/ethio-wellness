@@ -7,6 +7,8 @@ import { cn } from "@/lib/cn";
 export function SessionCard({
   initials,
   avatarClass,
+  photoUrl,
+  name,
   title,
   meta,
   time,
@@ -16,6 +18,8 @@ export function SessionCard({
 }: {
   initials: string;
   avatarClass: string;
+  photoUrl?: string;
+  name?: string;
   title: string;
   meta: string;
   time: string;
@@ -31,7 +35,13 @@ export function SessionCard({
         tone === "gold" && "border-l-4 border-l-gold",
       )}
     >
-      <Avatar initials={initials} avatarClass={avatarClass} />
+      <Avatar
+        initials={initials}
+        avatarClass={avatarClass}
+        photoUrl={photoUrl}
+        name={name}
+        shape="rounded"
+      />
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-ink">{title}</p>
         <p className="text-sm text-ink-2">{meta}</p>

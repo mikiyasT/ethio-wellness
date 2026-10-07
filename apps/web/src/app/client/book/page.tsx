@@ -175,7 +175,13 @@ function ClientBookInner() {
         </div>
         <aside className="rounded-2xl border border-border bg-surface p-5">
           <div className="flex items-center gap-3">
-            <Avatar initials={professional.initials} avatarClass={professional.avatarClass} />
+            <Avatar
+              initials={professional.initials}
+              avatarClass={professional.avatarClass}
+              photoUrl={professional.photoUrl}
+              name={professional.name}
+              shape="rounded"
+            />
             <div>
               <p className="font-semibold">{professional.name}</p>
               <p className="text-sm text-ink-2">{specialtyName}</p>
