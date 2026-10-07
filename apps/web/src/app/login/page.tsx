@@ -151,7 +151,7 @@ function LoginInner() {
             placeholder="Leave blank for demo accounts"
           />
           <div className="text-right">
-            <Link href={routes.forgotPassword} className="text-sm text-primary">
+            <Link href={routes.forgotPassword} className="text-sm text-teal-accent hover:underline">
               {t("login.forgot")}
             </Link>
           </div>
@@ -163,7 +163,7 @@ function LoginInner() {
           </button>
         </form>
         <p className="mt-6 text-center text-sm">
-          <Link href={registerHref} className="text-primary">
+          <Link href={registerHref} className="text-teal-accent hover:underline">
             {t("login.newHere")}
           </Link>
         </p>

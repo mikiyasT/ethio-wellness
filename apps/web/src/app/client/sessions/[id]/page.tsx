@@ -60,13 +60,19 @@ export default function ClientSessionDetailPage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <Link href={routes.clientSessions} className="text-sm text-primary">
+      <Link href={routes.clientSessions} className="text-sm text-teal-accent hover:underline">
         {t("session.back")}
       </Link>
       <h1 className="mt-4 text-3xl font-bold text-ink">{t("sessions.details")}</h1>
 
       <div className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-surface p-5">
-        <Avatar initials={professional.initials} avatarClass={professional.avatarClass} />
+        <Avatar
+          initials={professional.initials}
+          avatarClass={professional.avatarClass}
+          photoUrl={professional.photoUrl}
+          name={professional.name}
+          shape="rounded"
+        />
         <div>
           <p className="font-semibold">{professional.name}</p>
           <p className="text-sm text-ink-2">
@@ -129,11 +135,7 @@ export default function ClientSessionDetailPage() {
             <div className="space-y-3">
               <Alert tone="warning">{t("session.cancelConfirm")}</Alert>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  variant="danger"
-                  className="bg-error text-white hover:opacity-90"
-                  onClick={() => void onCancel()}
-                >
+                <Button variant="danger" onClick={() => void onCancel()}>
                   {t("session.cancelYes")}
                 </Button>
                 <Button variant="secondary" onClick={() => setConfirmCancel(false)}>

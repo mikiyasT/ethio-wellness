@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
           </button>
         </form>
         <p className="mt-4 text-sm">
-          <Link href={routes.login} className="text-primary">
+          <Link href={routes.login} className="text-teal-accent hover:underline">
             {t("forgot.back")}
           </Link>
         </p>

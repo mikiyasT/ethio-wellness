@@ -110,15 +110,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex min-h-full w-full max-w-[100vw] flex-col overflow-x-clip">
       <Header role={chromeRole} />
       {showSidebar ? (
         <div className="mx-auto flex w-full max-w-[1200px] flex-1 gap-8 px-4 py-8 pb-20 lg:pb-8">
           <Sidebar role={chromeRole} />
-          <div className="min-w-0 flex-1">{children}</div>
+          <div className="min-w-0 w-full flex-1">{children}</div>
         </div>
       ) : (
-        <main className={guestBooking ? "mx-auto w-full max-w-[1200px] flex-1 px-4 py-8" : "flex-1"}>
+        <main
+          className={
+            guestBooking
+              ? "mx-auto w-full max-w-[1200px] flex-1 px-4 py-8"
+              : "w-full min-w-0 flex-1"
+          }
+        >
           {children}
         </main>
       )}

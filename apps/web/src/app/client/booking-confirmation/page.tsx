@@ -65,7 +65,14 @@ function BookingConfirmationInner() {
 
       <div className="mt-8 rounded-2xl border border-border bg-surface p-6 text-left">
         <div className="flex items-center gap-3">
-          <Avatar initials={professional.initials} avatarClass={professional.avatarClass} size="lg" />
+          <Avatar
+            initials={professional.initials}
+            avatarClass={professional.avatarClass}
+            photoUrl={professional.photoUrl}
+            name={professional.name}
+            size="lg"
+            shape="rounded"
+          />
           <div>
             <p className="text-xl font-semibold">{professional.name}</p>
             <p className="text-ink-2">{categoryById(booking.specialty)?.name}</p>
@@ -104,7 +111,7 @@ function BookingConfirmationInner() {
       {isGuestBooking ? (
         <p className="mt-3 text-sm text-ink-2">
           {t("confirm.joinHint")}{" "}
-          <Link href={routes.join} className="font-semibold text-primary hover:underline">
+          <Link href={routes.join} className="font-semibold text-teal-accent hover:underline">
             {t("confirm.joinLink")}
           </Link>
         </p>

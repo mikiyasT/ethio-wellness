@@ -2,36 +2,8 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-:root {
-  color-scheme: light;
-  --primary: #1c5c3a;
-  --primary-hover: #154a2e;
-  --primary-dark: #0e3a23;
-  --primary-tint: #eaf3ed;
-  --gold: #c08a2d;
-  --gold-hover: #a67424;
-  --gold-tint: #faf1de;
-  --gold-deep: #e8833a;
-  --teal-accent: #0e7c7b;
-  --clay: #b4552d;
-  --bg: #faf6ee;
-  --surface: #ffffff;
-  --surface-warm: #f4eee0;
-  --border: #e7dcc6;
-  --border-strong: #d6c8a8;
-  --text: #221a11;
-  --text-2: #5d5347;
-  --text-3: #8c8071;
-  --success: #1c5c3a;
-  --warning: #9a6b1a;
-  --error: #b3261e;
-  --info: #2456a6;
-  --on-primary: #ffffff;
-  --avail: #1c5c3a;
-  --avail-hover: #154a2e;
-  --avail-tint: #eaf3ed;
-}
-
+/* App is dark-only — landing palette is the single source of truth. */
+:root,
 [data-theme="dark"] {
   color-scheme: dark;
   --bg: #092925;
@@ -41,27 +13,29 @@
   --border-strong: rgba(244, 238, 221, 0.28);
   --text: #f9f6ed;
   --text-2: #c5d3cd;
-  --text-3: #8fa3a0;
+  --text-3: rgba(197, 211, 205, 0.65);
   --primary: #f5c35a;
   --primary-hover: #f6be4a;
-  --primary-dark: #061f1c;
+  --primary-dark: #092925;
   --primary-tint: rgba(245, 195, 90, 0.14);
   --gold: #f6be4a;
-  --gold-hover: #f6be4a;
-  --gold-tint: rgba(245, 195, 90, 0.14);
+  --gold-hover: #f09345;
+  --gold-tint: rgba(246, 190, 74, 0.16);
   --gold-deep: #f09345;
   --teal-accent: #72c4ba;
-  --clay: #b4552d;
-  --success: #3fb950;
-  --warning: #9a6b1a;
-  --error: #b3261e;
-  --info: #4493f8;
-  /* Dark ink on gold CTAs / BrandMark */
   --on-primary: #0b332f;
-  /* Pinned availability greens — do not follow --primary */
+  --success: #72c4ba;
+  --warning: #f09345;
+  --error: #b3261e;
+  --info: #72c4ba;
+  /* EXEMPT: provider availability greens */
   --avail: #238636;
   --avail-hover: #2ea043;
   --avail-tint: rgba(35, 134, 54, 0.16);
+  /* EXEMPT: booked-slot amber gradient endpoints */
+  --booked-from: #f6be4a;
+  --booked-to: #e8833a;
+  --booked-ink: #1a1208;
 }
 
 /* Squash radii in dark theme, except marketing home */
@@ -116,7 +90,6 @@
   --color-gold-tint: var(--gold-tint);
   --color-gold-deep: var(--gold-deep);
   --color-teal-accent: var(--teal-accent);
-  --color-clay: var(--clay);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-warm: var(--surface-warm);
@@ -132,6 +105,9 @@
   --color-avail: var(--avail);
   --color-avail-hover: var(--avail-hover);
   --color-avail-tint: var(--avail-tint);
+  --color-booked-from: var(--booked-from);
+  --color-booked-to: var(--booked-to);
+  --color-booked-ink: var(--booked-ink);
   --font-sans: var(--font-manrope);
   --font-eth: var(--font-ethiopic);
 }
@@ -142,6 +118,9 @@
 
 html,
 body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   background: var(--bg);
   color: var(--text);
   transition: background-color 160ms ease, color 160ms ease;
@@ -193,10 +172,10 @@ textarea:focus-visible {
 @keyframes ayzon-pulse-dot {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(245, 195, 90, 0.45);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(245, 195, 90, 0);
+    box-shadow: 0 0 0 6px transparent;
   }
 }
 
@@ -210,33 +189,34 @@ textarea:focus-visible {
   }
 }
 
+/* Avatar tints — palette tokens only */
 .av-1 {
-  background: #1c5c3a;
+  background: var(--teal-accent);
 }
 .av-2 {
-  background: #2456a6;
+  background: var(--gold);
 }
 .av-3 {
-  background: #b4552d;
+  background: var(--gold-deep);
 }
 .av-4 {
-  background: #c08a2d;
+  background: var(--surface-warm);
 }
 .av-5 {
-  background: #0e3a23;
+  background: var(--primary-dark);
 }
 .av-6 {
-  background: #154a2e;
+  background: color-mix(in srgb, var(--teal-accent) 70%, var(--bg));
 }
 .av-7 {
-  background: #9a6b1a;
+  background: color-mix(in srgb, var(--gold) 75%, var(--gold-deep));
 }
 .av-8 {
-  background: #2456a6;
+  background: color-mix(in srgb, var(--teal-accent) 55%, var(--surface));
 }
 .av-9 {
-  background: #1c5c3a;
+  background: color-mix(in srgb, var(--primary) 55%, var(--surface-warm));
 }
 .av-10 {
-  background: #5d5347;
+  background: color-mix(in srgb, var(--text-2) 45%, var(--surface));
 }

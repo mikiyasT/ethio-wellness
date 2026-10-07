@@ -56,6 +56,7 @@ export interface DbProfessional {
   fee: number;
   avatarClass: `av-${number}`;
   initials: string;
+  photoUrl?: string;
   status: "pending" | "approved";
   rating?: number;
   reviewCount?: number;
@@ -219,6 +220,7 @@ function buildSeed(): Store {
       fee: 25,
       avatarClass: pro.avatarClass,
       initials: pro.initials,
+      photoUrl: pro.photoUrl,
       status: pro.status === "pending" ? "pending" : "approved",
       rating: pro.rating,
       reviewCount: pro.reviewCount,
@@ -590,12 +592,33 @@ export function formatFeeExact(fee: number) {
   return `$${fee.toFixed(2)}`;
 }
 
+/** Sample portraits shipped under `/public/professionals/{slug}.jpg`. */
+const SAMPLE_PHOTO_SLUGS = new Set([
+  "hana-tesfaye",
+  "dawit-mekonnen",
+  "tigist-haile",
+  "samuel-bekele",
+  "almaz-girma",
+  "yonas-tadesse",
+  "meron-assefa",
+  "kibrom-weldu",
+  "selamawit-kifle",
+  "girma-alemu",
+]);
+
+function resolvePhotoUrl(pro: DbProfessional): string | undefined {
+  if (pro.photoUrl) return pro.photoUrl;
+  if (SAMPLE_PHOTO_SLUGS.has(pro.slug)) return `/professionals/${pro.slug}.jpg`;
+  return undefined;
+}
+
 /** Map DB professional → shared card/list shape used by UI components. */
-export function toCardProfessional(pro: DbProfessional, nextSlotLabel = ""): Professional {
+export function toCardProfessional(pro: DbProfessional): Professional {
   return {
     id: pro.id,
     slug: pro.slug,
     initials: pro.initials,
+    photoUrl: resolvePhotoUrl(pro),
     avatarClass: pro.avatarClass,
     name: pro.name,
     title: pro.title || "Counselor",
@@ -604,7 +627,6 @@ export function toCardProfessional(pro: DbProfessional, nextSlotLabel = ""): Pro
     specialties: pro.specialties,
     rating: pro.rating ?? 5,
     reviewCount: pro.reviewCount ?? 0,
-    nextSlotLabel: nextSlotLabel || "Check availability",
     bio: pro.bio,
     status: pro.status,
   };

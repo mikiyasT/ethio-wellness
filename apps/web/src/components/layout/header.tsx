@@ -15,7 +15,7 @@ import { useSession } from "@/lib/session";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "./language-switcher";
 
 function initialsFromName(name?: string, role?: UserRole) {
@@ -50,10 +50,14 @@ export function Header({ role }: { role: UserRole }) {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
-    <header className="sticky top-0 z-40 overflow-visible border-b border-border/70 bg-bg/95 backdrop-blur">
-      <div className="mx-auto flex min-h-[72px] max-w-[1200px] items-center justify-between gap-4 px-4">
-        <Link href={homeHref} className="flex items-center gap-2 font-semibold text-ink">
+    <header className="sticky top-0 z-40 w-full max-w-[100vw] overflow-x-clip border-b border-border/70 bg-bg/95 backdrop-blur">
+      <div className="mx-auto flex min-h-[72px] w-full max-w-[1200px] items-center justify-between gap-2 px-4 sm:gap-4">
+        <Link href={homeHref} className="flex min-w-0 shrink items-center gap-2 font-semibold text-ink">
           <BrandMark />
           <span className="hidden sm:inline">{t("brand")}</span>
         </Link>
@@ -75,22 +79,11 @@ export function Header({ role }: { role: UserRole }) {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <LanguageSwitcher />
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {role === "guest" ? (
-            <>
-              <ButtonLink href={routes.login} size="sm" className="btn-keep">
-                {t("nav.signIn")}
-              </ButtonLink>
-              <button
-                type="button"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border lg:hidden"
-                aria-label={open ? "Close menu" : "Open menu"}
-                onClick={() => setOpen((value) => !value)}
-              >
-                {open ? <X size={18} /> : <Menu size={18} />}
-              </button>
-            </>
+            <ButtonLink href={routes.login} size="sm" className="btn-keep">
+              {t("nav.signIn")}
+            </ButtonLink>
           ) : (
             <ButtonLink
               href={routes.account}
@@ -102,29 +95,53 @@ export function Header({ role }: { role: UserRole }) {
               {avatarInitials}
             </ButtonLink>
           )}
+          <button
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
         </div>
       </div>
 
-      {open && role === "guest" ? (
-        <nav className="border-t border-border px-4 py-3 lg:hidden">
-          {guestNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className="block min-h-11 py-2 text-ink"
-            >
-              {t(item.labelKey)}
-            </Link>
-          ))}
-          <Link
-            href={routes.login}
-            className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-4 font-semibold text-on-primary"
-            onClick={() => setOpen(false)}
-          >
-            {t("nav.signIn")}
-          </Link>
-        </nav>
+      {open ? (
+        <div className="border-t border-border px-4 py-3">
+          <nav className="lg:hidden">
+            {nav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "block min-h-11 py-2",
+                  isActive(item.href) ? "font-semibold text-teal-accent" : "text-ink",
+                )}
+              >
+                {t(item.labelKey)}
+              </Link>
+            ))}
+            {role === "guest" ? (
+              <Link
+                href={routes.login}
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-4 font-semibold text-on-primary"
+                onClick={() => setOpen(false)}
+              >
+                {t("nav.signIn")}
+              </Link>
+            ) : null}
+          </nav>
+
+          <div className="mt-4 space-y-2 border-t border-border pt-4 lg:mt-0 lg:border-0 lg:pt-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-3">
+              {t("chrome.settings")}
+            </p>
+            <p className="text-sm font-medium text-ink">{t("chrome.language")}</p>
+            <LanguageSwitcher />
+          </div>
+        </div>
       ) : null}
     </header>
   );

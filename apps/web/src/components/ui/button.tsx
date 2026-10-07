@@ -5,15 +5,14 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 type Variant = "primary" | "secondary" | "gold" | "ghost" | "text" | "danger" | "outline";
 type Size = "sm" | "md" | "lg";
 
+/** App-wide: filled CTAs are gold + dark ink. Text links use teal accent. */
 const variants: Record<Variant, string> = {
   primary: "bg-primary text-on-primary hover:bg-primary-hover",
-  secondary:
-    "bg-surface text-ink border border-border-strong hover:bg-surface-warm dark:bg-surface-warm dark:hover:bg-border",
+  secondary: "bg-primary text-on-primary hover:bg-primary-hover",
   gold: "bg-gold text-on-primary hover:bg-gold-hover",
-  ghost: "bg-white/15 text-white hover:bg-white/25",
-  outline:
-    "bg-transparent text-ink border border-border-strong hover:bg-surface-warm dark:bg-surface-warm dark:hover:bg-border",
-  text: "bg-transparent text-primary hover:underline",
+  ghost: "bg-primary text-on-primary hover:bg-primary-hover",
+  outline: "bg-primary text-on-primary hover:bg-primary-hover",
+  text: "bg-transparent text-teal-accent hover:underline",
   danger: "bg-transparent text-error hover:bg-surface-warm",
 };
 
