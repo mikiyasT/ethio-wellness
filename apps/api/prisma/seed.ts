@@ -79,7 +79,18 @@ function startsAtFromEat(dateIso: string, timeLabel: string): Date {
   );
 }
 
+function assertSeedAllowed() {
+  const production = process.env.NODE_ENV === "production";
+  const allowed = process.env.ALLOW_DESTRUCTIVE_SEED === "true";
+  if (production && !allowed) {
+    throw new Error(
+      "Refusing to seed: this deletes every user, professional, slot, and booking. NODE_ENV=production. Set ALLOW_DESTRUCTIVE_SEED=true to run it on purpose.",
+    );
+  }
+}
+
 async function main() {
+  assertSeedAllowed();
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   const todayIso = eatTodayIso();
 

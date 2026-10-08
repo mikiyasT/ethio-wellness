@@ -40,7 +40,7 @@ npm run db:setup -w @ethio-wellness/api
 npm run dev:api
 ```
 
-Seeded users share the password `AyzonDemo!2026`. Sample counselors are `approved`. `test.provider@example.com` stays `pending` until the `ADMIN_TOKEN` approve endpoint lands in a later phase. Slot times are stored as UTC instants; sample labels are interpreted as East Africa Time.
+The seed deletes existing rows before inserting. It refuses to run when `NODE_ENV=production` unless `ALLOW_DESTRUCTIVE_SEED=true`. Seeded users share the password `AyzonDemo!2026`. Sample counselors are `approved`. `test.provider@example.com` stays `pending` until the `ADMIN_TOKEN` approve endpoint lands in a later phase. Slot times are stored as UTC instants; sample labels are interpreted as East Africa Time.
 
 Railway: set the same env vars as secrets and use `npx prisma migrate deploy` as the release command. That command also applies the raw SQL partial unique index on `bookings(slot_id) WHERE status = 'upcoming'`.
 

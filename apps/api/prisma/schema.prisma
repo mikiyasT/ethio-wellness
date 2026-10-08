@@ -16,6 +16,7 @@ enum UserRole {
 enum ProfessionalStatus {
   pending
   approved
+  rejected
 }
 
 enum SlotStatus {
@@ -45,7 +46,7 @@ enum LinkState {
 }
 
 model User {
-  id           String     @id
+  id           String     @id @default(cuid())
   name         String
   email        String     @unique
   passwordHash String
@@ -57,7 +58,7 @@ model User {
 }
 
 model Session {
-  id        String   @id
+  id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash String   @unique
@@ -68,7 +69,7 @@ model Session {
 }
 
 model Professional {
-  id           String             @id
+  id           String             @id @default(cuid())
   userId       String             @unique
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   slug         String             @unique
@@ -95,7 +96,7 @@ model Professional {
 
 /// One-hour availability window. Times are UTC instants, never date/time strings.
 model Slot {
-  id             String       @id
+  id             String       @id @default(cuid())
   professionalId String
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   startsAt       DateTime     @db.Timestamptz(6)
@@ -111,7 +112,7 @@ model Slot {
 }
 
 model Booking {
-  id                String        @id
+  id                String        @id @default(cuid())
   clientId          String?
   client            User?         @relation("ClientBookings", fields: [clientId], references: [id])
   professionalId    String

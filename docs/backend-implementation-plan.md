@@ -59,7 +59,7 @@ Mounted under `apps/api` (see `src/app.ts`):
 
 - **User** — id, name, email, role (`client` \| `professional`), passwordHash, createdAt
 - **Session** — id, userId, token hash, expiresAt, createdAt (DB-backed cookies)
-- **Professional** — profile, languages, specialties, fee, status (`pending` \| `approved`), photoUrl, ratings
+- **Professional** — profile, languages, specialties, fee, status (`pending` \| `approved` \| `rejected`), photoUrl, ratings
 - **Slot** — professionalId, **`startsAt` / `endsAt` timestamptz (UTC)**, status (`open` \| `closed` \| `booked` \| `held`), holdExpiresAt, holdBookingId. Uniqueness: `@@unique([professionalId, startsAt])`. One hour: `endsAt = startsAt + 1 hour`. **No** `dateIso`, **no** `timeLabel` columns.
 - **Booking** — client **or** guest fields (guest identity = **email**), slotId, fee, status (`held` \| `upcoming` \| `cancelled` \| `completed`), sessionCode, **`manageTokenHash`**, **`joinTokenHash`**, Stripe ids (`checkoutSessionId`, `paymentIntentId`), linkState
 
