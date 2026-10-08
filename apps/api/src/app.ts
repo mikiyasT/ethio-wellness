@@ -12,7 +12,7 @@ import { usersRouter } from "./modules/users/users.routes.js";
 export function createApp() {
   const app = express();
 
-  app.use(cors({ origin: env.corsOrigin }));
+  app.use(cors({ origin: env.corsOrigins }));
   app.use(express.json());
 
   app.use("/health", healthRouter);

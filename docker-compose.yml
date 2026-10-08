@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ayzon
+      POSTGRES_PASSWORD: ayzon
+      POSTGRES_DB: ayzoncare
+    volumes:
+      - ayzon_pg:/var/lib/postgresql/data
+
+volumes:
+  ayzon_pg:

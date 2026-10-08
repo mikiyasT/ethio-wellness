@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  client
+  professional
+}
+
+enum ProfessionalStatus {
+  pending
+  approved
+}
+
+enum SlotStatus {
+  open
+  closed
+  booked
+  held
+}
+
+enum BookingStatus {
+  held
+  upcoming
+  cancelled
+  completed
+}
+
+enum CancelledBy {
+  client
+  professional
+  guest
+  system
+}
+
+enum LinkState {
+  ready
+  pending
+}
+
+model User {
+  id           String     @id
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         UserRole
+  createdAt    DateTime   @default(now()) @db.Timestamptz(6)
+  sessions     Session[]
+  professional Professional?
+  bookings     Booking[]  @relation("ClientBookings")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+}
+
+model Professional {
+  id           String             @id
+  userId       String             @unique
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug         String             @unique
+  name         String
+  title        String
+  city         String
+  credentials  String             @default("")
+  bio          String
+  practiceMore String             @default("")
+  languages    String[]
+  specialties  String[]
+  feeCents     Int
+  currency     String             @default("usd")
+  avatarClass  String
+  initials     String
+  photoUrl     String?
+  status       ProfessionalStatus
+  rating       Decimal?           @db.Decimal(3, 1)
+  reviewCount  Int                @default(0)
+  createdAt    DateTime           @default(now()) @db.Timestamptz(6)
+  slots        Slot[]
+  bookings     Booking[]
+}
+
+/// One-hour availability window. Times are UTC instants, never date/time strings.
+model Slot {
+  id             String       @id
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  startsAt       DateTime     @db.Timestamptz(6)
+  endsAt         DateTime     @db.Timestamptz(6)
+  status         SlotStatus
+  holdExpiresAt  DateTime?    @db.Timestamptz(6)
+  holdBookingId  String?
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  bookings       Booking[]
+
+  @@unique([professionalId, startsAt])
+  @@index([professionalId, status, startsAt])
+}
+
+model Booking {
+  id                String        @id
+  clientId          String?
+  client            User?         @relation("ClientBookings", fields: [clientId], references: [id])
+  professionalId    String
+  professional      Professional  @relation(fields: [professionalId], references: [id])
+  slotId            String        @map("slot_id")
+  slot              Slot          @relation(fields: [slotId], references: [id])
+  specialty         String
+  feeCents          Int
+  currency          String        @default("usd")
+  status            BookingStatus
+  createdAt         DateTime      @default(now()) @db.Timestamptz(6)
+  holdExpiresAt     DateTime?     @db.Timestamptz(6)
+  sessionCode       String?       @unique
+  manageTokenHash   String?
+  joinTokenHash     String?
+  checkoutSessionId String?
+  paymentIntentId   String?
+  linkState         LinkState?
+  cancelledBy       CancelledBy?
+  guestFirstName    String?
+  guestLastName     String?
+  guestEmail        String?
+  guestPhone        String?
+  guestNote         String?
+  claimedAt         DateTime?     @db.Timestamptz(6)
+
+  @@index([guestEmail])
+  @@index([sessionCode, guestEmail])
+  @@index([professionalId, status])
+  @@index([clientId])
+  @@map("bookings")
+}
