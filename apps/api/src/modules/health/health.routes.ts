@@ -1,7 +1,13 @@
 import { Router } from "express";
+import { prisma } from "../../lib/prisma.js";
 
 export const healthRouter = Router();
 
-healthRouter.get("/", (_req, res) => {
-  res.json({ status: "ok", service: "ayzon-api" });
+healthRouter.get("/", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", service: "ayzon-api", db: "up" });
+  } catch {
+    res.status(503).json({ status: "error", service: "ayzon-api", db: "down" });
+  }
 });
