@@ -11,6 +11,7 @@ import {
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { FilterChip, MultiSelect } from "@/components/ui/multi-select";
 import { db, toCardProfessional } from "@/lib/db";
+import { fetchApprovedProfessionals, usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -28,13 +29,21 @@ function ProfessionalsDirectory() {
   const searchParams = useSearchParams();
   const preset = searchParams.get("specialty") as CategoryId | null;
   const [directory, setDirectory] = useState<Professional[]>([]);
+  const [loadError, setLoadError] = useState("");
   const [languages, setLanguages] = useState<LanguageId[]>([]);
   const [specialties, setSpecialties] = useState<CategoryId[]>(preset ? [preset] : []);
 
   useEffect(() => {
     void (async () => {
-      const approved = await db.professionals.list({ status: "approved" });
-      setDirectory(approved.map((pro) => toCardProfessional(pro)));
+      try {
+        const approved = usePublicApi()
+          ? await fetchApprovedProfessionals()
+          : await db.professionals.list({ status: "approved" });
+        setDirectory(approved.map((pro) => toCardProfessional(pro)));
+        setLoadError("");
+      } catch {
+        setLoadError("Could not load counselors from the server.");
+      }
     })();
   }, []);
 
@@ -141,6 +150,8 @@ function ProfessionalsDirectory() {
           </div>
         ) : null}
       </div>
+
+      {loadError ? <p className="mb-4 mt-8 text-sm text-error">{loadError}</p> : null}
 
       <p className="mb-4 mt-8 text-sm text-ink-2">
         {t("pros.showing")} {results.length} {t("pros.count")}

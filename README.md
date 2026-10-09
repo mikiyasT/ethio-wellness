@@ -5,7 +5,7 @@ Monorepo for the **Ayzon** web app ([ayzoncare.com](https://ayzoncare.com)). The
 ## Apps
 
 - `apps/web` — Next.js frontend (29 spec screens, design tokens, sample data)
-- `apps/api` — Express API (Prisma + Neon Postgres; domain routes still return 501 until later phases)
+- `apps/api` — Express API (Prisma + Neon Postgres). Public directory reads are live; other domain routes still return 501.
 - `packages/shared` — types, sample data, routes, and copy from the spec
 
 ## Run locally
@@ -18,8 +18,10 @@ npm run dev:web
 npm run dev:api
 ```
 
-- Web: http://localhost:3000
+- Web: http://localhost:3000 (also on your LAN, because `dev` listens on `0.0.0.0`)
 - API health: http://localhost:4000/health (`db` is `up` when Postgres is reachable)
+
+Phone on the same Wi-Fi: open `http://<this-computer-lan-ip>:3000`. The counselor list calls that same address on port 4000, so it does not use the phone’s `localhost`. That is allowed only while `COOKIE_SECURE=false`. On this computer, keep using http://localhost:3000.
 
 ### API database (Phase A)
 
@@ -44,13 +46,23 @@ The seed deletes existing rows before inserting. It refuses to run when `NODE_EN
 
 Railway: set the same env vars as secrets and use `npx prisma migrate deploy` as the release command. That command also applies the raw SQL partial unique index on `bookings(slot_id) WHERE status = 'upcoming'`.
 
+### Public directory (Phase B)
+
+Copy `apps/web/.env.example` to `apps/web/.env.local` and leave `NEXT_PUBLIC_USE_API=true` and `NEXT_PUBLIC_API_URL=http://localhost:4000`. That file is the local dev switch: the professionals list, profile, and open hours load from Postgres. Pending professionals are omitted (a direct profile URL is a 404). Slot chips are formatted in the browser’s timezone; the API still returns UTC `startsAt` / `endsAt`. Booking and sign-in still use the browser store until later phases.
+
+```bash
+curl -s http://localhost:4000/categories
+curl -s http://localhost:4000/professionals
+curl -s http://localhost:4000/professionals/hana-tesfaye/availability
+```
+
 ## Spec rules followed
 
 - Guests can browse services and professionals without an account
 - Auth gate appears only at book / pay / account
 - Copy comes from `docs/ethio-wellness-ui-spec/content/copy.md`
 - API request/response contracts are **not** in the UI spec, so backend modules return `501 unspecified_contract` until a product API spec exists
-- Frontend screens currently read `packages/shared` sample data
+- With `NEXT_PUBLIC_USE_API=true`, the public directory reads Postgres. Other screens still use the browser store
 
 ## Docs
 

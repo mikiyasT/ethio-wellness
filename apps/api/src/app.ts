@@ -9,10 +9,38 @@ import { healthRouter } from "./modules/health/health.routes.js";
 import { professionalsRouter } from "./modules/professionals/professionals.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
 
+function isPrivateLanHost(hostname: string) {
+  return (
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname)
+  );
+}
+
+/** Local dev: a phone on Wi-Fi opens the site by LAN IP, so that origin must be allowed. */
+function isAllowedOrigin(origin: string | undefined) {
+  if (!origin) return true;
+  if (env.corsOrigins.includes(origin)) return true;
+  if (env.cookieSecure) return false;
+  try {
+    const url = new URL(origin);
+    return url.protocol === "http:" && isPrivateLanHost(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function createApp() {
   const app = express();
 
-  app.use(cors({ origin: env.corsOrigins }));
+  app.use(
+    cors({
+      origin(origin, callback) {
+        callback(null, isAllowedOrigin(origin));
+      },
+      credentials: true,
+    }),
+  );
   app.use(express.json());
 
   app.use("/health", healthRouter);

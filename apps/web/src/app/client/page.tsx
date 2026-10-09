@@ -6,6 +6,7 @@ import { ProfessionalCard } from "@/components/domain/professional-card";
 import { SessionCard } from "@/components/domain/session-card";
 import { ButtonLink } from "@/components/ui/button";
 import { db, toCardProfessional, type DbBooking } from "@/lib/db";
+import { fetchApprovedProfessionals, usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import { useEffect, useState } from "react";
@@ -28,7 +29,9 @@ export default function ClientHomePage() {
         const pro = await db.professionals.getById(upcoming.professionalId);
         if (pro) setProfessional(toCardProfessional(pro));
       }
-      const approved = await db.professionals.list({ status: "approved" });
+      const approved = usePublicApi()
+        ? await fetchApprovedProfessionals()
+        : await db.professionals.list({ status: "approved" });
       setRecommended(approved.slice(4, 6).map((pro) => toCardProfessional(pro)));
     })();
   }, [ready, user.userId]);
