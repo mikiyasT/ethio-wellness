@@ -18,6 +18,7 @@ import {
 } from "@/lib/availability-editor";
 import { bookPath } from "@/lib/booking";
 import { db, formatFee, toCardProfessional, type DbProfessional, type DbSlot } from "@/lib/db";
+import { fetchOpenSlots, fetchProfessionalBySlug, usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
 import { trackPixel } from "@/lib/pixel";
 import { useSession } from "@/lib/session";
@@ -49,13 +50,17 @@ export default function ProfessionalDetailPage() {
     trackPixel("PageView");
     void (async () => {
       await db.bookings.releaseExpiredHolds();
-      const found = await db.professionals.getBySlug(params.slug);
+      const found = usePublicApi()
+        ? await fetchProfessionalBySlug(params.slug)
+        : await db.professionals.getBySlug(params.slug);
       if (!found || found.status !== "approved") {
         setDbPro(null);
         return;
       }
       setDbPro(found);
-      const list = await db.slots.listForProfessional(found.id);
+      const list = usePublicApi()
+        ? await fetchOpenSlots(found.slug, found.id)
+        : await db.slots.listForProfessional(found.id);
       setSlots(list);
       const firstOpen =
         list.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso ?? todayIso;

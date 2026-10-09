@@ -11,6 +11,7 @@ import {
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { FilterChip, MultiSelect } from "@/components/ui/multi-select";
 import { db, toCardProfessional } from "@/lib/db";
+import { fetchApprovedProfessionals, usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -33,7 +34,9 @@ function ProfessionalsDirectory() {
 
   useEffect(() => {
     void (async () => {
-      const approved = await db.professionals.list({ status: "approved" });
+      const approved = usePublicApi()
+        ? await fetchApprovedProfessionals()
+        : await db.professionals.list({ status: "approved" });
       setDirectory(approved.map((pro) => toCardProfessional(pro)));
     })();
   }, []);

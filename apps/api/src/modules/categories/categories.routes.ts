@@ -1,6 +1,8 @@
 import { Router } from "express";
-import { unspecifiedContract } from "../../lib/unspecified.js";
+import { categories } from "../catalog.js";
 
 export const categoriesRouter = Router();
 
-categoriesRouter.get("/", unspecifiedContract("categories.list"));
+categoriesRouter.get("/", (_req, res) => {
+  res.json({ categories });
+});
