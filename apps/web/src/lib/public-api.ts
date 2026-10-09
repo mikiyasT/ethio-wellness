@@ -5,7 +5,7 @@ import type { DbProfessional, DbSlot } from "@/lib/db";
 const CONFIGURED_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 /** On a phone, localhost is the phone. Use the same host that served the page, on the API port. */
-function apiBase() {
+export function apiBase() {
   if (typeof window === "undefined") return CONFIGURED_API_URL;
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return CONFIGURED_API_URL;

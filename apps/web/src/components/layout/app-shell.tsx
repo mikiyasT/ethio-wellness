@@ -2,7 +2,7 @@
 
 import { routes } from "@ethio-wellness/shared";
 import { useSession } from "@/lib/session";
-import { AUTO_APPROVE_PROFESSIONALS } from "@/lib/pro-approval";
+import { AUTO_APPROVE_PROFESSIONALS, isAwaitingApproval } from "@/lib/pro-approval";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { BottomNav } from "./bottom-nav";
@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (
       !AUTO_APPROVE_PROFESSIONALS &&
       role === "professional" &&
-      user.professionalStatus === "pending" &&
+      isAwaitingApproval(user.professionalStatus) &&
       isProArea &&
       !isProOnboardingFlow &&
       pathname !== routes.professionalPending &&

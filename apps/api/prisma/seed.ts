@@ -97,6 +97,7 @@ async function main() {
   await prisma.booking.deleteMany();
   await prisma.slot.deleteMany();
   await prisma.session.deleteMany();
+  await prisma.passwordReset.deleteMany();
   await prisma.professional.deleteMany();
   await prisma.user.deleteMany();
 

@@ -2,9 +2,11 @@
 
 import { routes } from "@ethio-wellness/shared";
 import { Alert } from "@/components/ui/alert";
+import { AuthRequestError, REGISTER_DRAFT_KEY, registerAccount } from "@/lib/auth-api";
 import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { defaultProfessionalStatus } from "@/lib/pro-approval";
+import { usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
 import { Stethoscope, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,12 +16,23 @@ function RoleSelectionInner() {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
-  const { setSessionFromUser } = useSession();
+  const { setSessionFromUser, refresh } = useSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const next = search.get("next");
   const name = search.get("name") ?? "";
   const email = search.get("email") ?? "";
+
+  function draftPassword() {
+    try {
+      const raw = sessionStorage.getItem(REGISTER_DRAFT_KEY);
+      const draft = raw ? (JSON.parse(raw) as { email?: string; password?: string }) : null;
+      if (!draft?.password || draft.email !== email.trim().toLowerCase()) return "";
+      return draft.password;
+    } catch {
+      return "";
+    }
+  }
 
   async function chooseClient() {
     if (!email.trim()) {
@@ -29,6 +42,35 @@ function RoleSelectionInner() {
     setBusy(true);
     setError("");
     try {
+      if (usePublicApi()) {
+        const password = draftPassword();
+        if (!password) {
+          setError("Registration details expired. Please create your account again.");
+          setBusy(false);
+          return;
+        }
+        await registerAccount({
+          name: name.trim() || email.split("@")[0] || "Client",
+          email,
+          password,
+          role: "client",
+        });
+        sessionStorage.removeItem(REGISTER_DRAFT_KEY);
+        await refresh();
+        if (
+          next &&
+          next.startsWith("/") &&
+          !next.startsWith("//") &&
+          next !== routes.account &&
+          !next.startsWith(`${routes.account}/`) &&
+          (next.startsWith("/client/") || next.startsWith("/professionals/"))
+        ) {
+          router.push(next);
+          return;
+        }
+        router.push(routes.clientOnboarding);
+        return;
+      }
       let user = await db.users.findByEmail(email);
       if (!user) {
         user = await db.users.create({
@@ -55,6 +97,10 @@ function RoleSelectionInner() {
       router.push(routes.clientOnboarding);
     } catch (err) {
       setBusy(false);
+      if (err instanceof AuthRequestError && err.code === "email_taken") {
+        setError("An account with that email already exists. Sign in instead.");
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not create your account. Please try again.");
     }
   }
@@ -68,6 +114,24 @@ function RoleSelectionInner() {
     setError("");
     try {
       const displayName = name.trim() || email.split("@")[0] || "Professional";
+      if (usePublicApi()) {
+        const password = draftPassword();
+        if (!password) {
+          setError("Registration details expired. Please create your account again.");
+          setBusy(false);
+          return;
+        }
+        await registerAccount({
+          name: displayName,
+          email,
+          password,
+          role: "professional",
+        });
+        sessionStorage.removeItem(REGISTER_DRAFT_KEY);
+        await refresh();
+        router.push(routes.professionalOnboarding);
+        return;
+      }
       let user = await db.users.findByEmail(email);
       if (!user) {
         user = await db.users.create({
@@ -101,6 +165,10 @@ function RoleSelectionInner() {
       router.push(routes.professionalOnboarding);
     } catch (err) {
       setBusy(false);
+      if (err instanceof AuthRequestError && err.code === "email_taken") {
+        setError("An account with that email already exists. Sign in instead.");
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not create your professional account. Please try again.");
     }
   }

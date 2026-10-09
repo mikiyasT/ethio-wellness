@@ -52,9 +52,22 @@ model User {
   passwordHash String
   role         UserRole
   createdAt    DateTime   @default(now()) @db.Timestamptz(6)
-  sessions     Session[]
-  professional Professional?
-  bookings     Booking[]  @relation("ClientBookings")
+  sessions       Session[]
+  professional   Professional?
+  bookings       Booking[]       @relation("ClientBookings")
+  passwordResets PasswordReset[]
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
 }
 
 model Session {

@@ -1,7 +1,9 @@
 "use client";
 
 import type { UserRole } from "@ethio-wellness/shared";
+import { fetchCurrentUser, logoutAccount, type AuthUser } from "@/lib/auth-api";
 import { db, type DbUser } from "@/lib/db";
+import { usePublicApi } from "@/lib/public-api";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface SessionUser {
@@ -11,7 +13,7 @@ export interface SessionUser {
   email?: string;
   professionalId?: string;
   /** Professional applications need manual approval before dashboard access. */
-  professionalStatus?: "pending" | "approved";
+  professionalStatus?: "pending" | "approved" | "rejected";
 }
 
 interface SessionContextValue {
@@ -19,7 +21,7 @@ interface SessionContextValue {
   role: UserRole;
   setSession: (user: SessionUser) => void;
   setSessionFromUser: (dbUser: DbUser) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   ready: boolean;
   refresh: () => Promise<void>;
 }
@@ -27,6 +29,17 @@ interface SessionContextValue {
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 const guest: SessionUser = { role: "guest" };
+
+function sessionFromAuth(user: AuthUser): SessionUser {
+  return {
+    userId: user.id,
+    role: user.role,
+    name: user.name,
+    email: user.email,
+    professionalId: user.professionalId,
+    professionalStatus: user.professionalStatus,
+  };
+}
 
 async function resolveSession(userId: string | null): Promise<SessionUser> {
   if (!userId) return guest;
@@ -58,6 +71,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (usePublicApi()) {
+      const current = await fetchCurrentUser();
+      setUser(current ? sessionFromAuth(current) : guest);
+      return;
+    }
     const userId = await db.session.getUserId();
     setUser(await resolveSession(userId));
   }, []);
@@ -79,9 +97,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     void db.session.setUserId(next.userId ?? null);
   }, []);
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
+    if (usePublicApi()) {
+      try {
+        await logoutAccount();
+      } catch {
+        // Clearing the local view still signs the tab out if the API is unreachable.
+      }
+    } else {
+      await db.session.clear();
+    }
     setUser(guest);
-    void db.session.clear();
   }, []);
 
   const value = useMemo(

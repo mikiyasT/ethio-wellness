@@ -5,7 +5,7 @@ import { SessionCard } from "@/components/domain/session-card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
 import { loadProDraftForUser } from "@/lib/pro-draft";
-import { AUTO_APPROVE_PROFESSIONALS } from "@/lib/pro-approval";
+import { AUTO_APPROVE_PROFESSIONALS, isAwaitingApproval } from "@/lib/pro-approval";
 import { guestDisplayName, guestFirstName } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
@@ -47,7 +47,7 @@ export default function ProfessionalHomePage() {
     if (
       !AUTO_APPROVE_PROFESSIONALS &&
       user.role === "professional" &&
-      user.professionalStatus === "pending"
+      isAwaitingApproval(user.professionalStatus)
     ) {
       router.replace(routes.professionalPending);
     }
