@@ -2,7 +2,22 @@ import type { CategoryId, LanguageId } from "@ethio-wellness/shared";
 import { formatDayChip, toIsoDate } from "@/lib/availability-editor";
 import type { DbProfessional, DbSlot } from "@/lib/db";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const CONFIGURED_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+/** On a phone, localhost is the phone. Use the same host that served the page, on the API port. */
+function apiBase() {
+  if (typeof window === "undefined") return CONFIGURED_API_URL;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return CONFIGURED_API_URL;
+  let port = "4000";
+  try {
+    port = new URL(CONFIGURED_API_URL).port || "4000";
+  } catch {
+    port = "4000";
+  }
+  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+  return `${protocol}//${host}:${port}`;
+}
 
 /** Public reads (directory, profile, open hours) come from the API when this is true. Writes stay in localStorage. */
 export function usePublicApi() {
@@ -37,7 +52,7 @@ type ApiSlot = {
 };
 
 async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${apiBase()}${path}`, {
     credentials: "include",
     cache: "no-store",
   });

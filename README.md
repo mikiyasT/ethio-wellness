@@ -18,8 +18,10 @@ npm run dev:web
 npm run dev:api
 ```
 
-- Web: http://localhost:3000
+- Web: http://localhost:3000 (also on your LAN, because `dev` listens on `0.0.0.0`)
 - API health: http://localhost:4000/health (`db` is `up` when Postgres is reachable)
+
+Phone on the same Wi-Fi: open `http://<this-computer-lan-ip>:3000`. The counselor list calls that same address on port 4000, so it does not use the phone’s `localhost`. That is allowed only while `COOKIE_SECURE=false`. On this computer, keep using http://localhost:3000.
 
 ### API database (Phase A)
 
@@ -46,7 +48,7 @@ Railway: set the same env vars as secrets and use `npx prisma migrate deploy` as
 
 ### Public directory (Phase B)
 
-Copy `apps/web/.env.example` to `apps/web/.env.local` (`NEXT_PUBLIC_USE_API=true`, `NEXT_PUBLIC_API_URL=http://localhost:4000`). With the API running, the professionals list, profile, and open hours load from Postgres. Pending professionals are omitted (a direct profile URL is a 404). Slot chips are formatted in the browser’s timezone; the API still returns UTC `startsAt` / `endsAt`. Booking and sign-in still use the browser store until later phases.
+Copy `apps/web/.env.example` to `apps/web/.env.local` and leave `NEXT_PUBLIC_USE_API=true` and `NEXT_PUBLIC_API_URL=http://localhost:4000`. That file is the local dev switch: the professionals list, profile, and open hours load from Postgres. Pending professionals are omitted (a direct profile URL is a 404). Slot chips are formatted in the browser’s timezone; the API still returns UTC `startsAt` / `endsAt`. Booking and sign-in still use the browser store until later phases.
 
 ```bash
 curl -s http://localhost:4000/categories
