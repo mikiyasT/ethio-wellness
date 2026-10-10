@@ -21,6 +21,12 @@ if (!parsed.success) {
   throw new Error("Invalid API environment");
 }
 
+if (process.env.NODE_ENV === "production" && parsed.data.COOKIE_SECURE !== "true") {
+  console.warn(
+    "COOKIE_SECURE must be true in production so the session cookie is Secure and SameSite=None. The web app and API must both be HTTPS.",
+  );
+}
+
 if (!parsed.data.STRIPE_SECRET_KEY) {
   console.warn("STRIPE_SECRET_KEY is not set. Checkout cannot start.");
 } else if (!parsed.data.STRIPE_WEBHOOK_SECRET) {

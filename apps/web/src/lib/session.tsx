@@ -88,13 +88,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const setSessionFromUser = useCallback(async (dbUser: DbUser) => {
-    await db.session.setUserId(dbUser.id);
     setUser(await resolveSession(dbUser.id));
   }, []);
 
   const setSession = useCallback((next: SessionUser) => {
     setUser(next);
-    void db.session.setUserId(next.userId ?? null);
   }, []);
 
   const signOut = useCallback(async () => {

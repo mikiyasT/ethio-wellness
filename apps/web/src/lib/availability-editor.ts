@@ -57,6 +57,9 @@ export function eatTodayIso() {
   return eatDateAndHour(new Date()).dateIso;
 }
 
+/** Matches the API. Providers open hours at least this many East Africa Time days ahead. */
+export const MIN_LEAD_DAYS = 2;
+
 export function toIsoDate(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");

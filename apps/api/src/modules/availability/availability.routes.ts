@@ -18,7 +18,11 @@ const putSchema = z.object({
 
 function sendError(res: { status: (code: number) => { json: (body: unknown) => void } }, error: unknown) {
   if (error instanceof AuthError || error instanceof AvailabilityError) {
-    res.status(error.status).json({ error: error.code });
+    res.status(error.status).json(
+      error instanceof AvailabilityError && error.minDate
+        ? { error: error.code, minDate: error.minDate }
+        : { error: error.code },
+    );
     return true;
   }
   return false;

@@ -1,8 +1,6 @@
 /**
- * PILOT DATA LAYER — localStorage stand-in for the real API + Postgres.
- * Keep every function async so the swap is mechanical.
- *
- * Known limitation: data is per-browser only (no multi-device sync).
+ * In-memory types and helpers left over from the pilot.
+ * Domain data lives in Postgres. This module must not write localStorage.
  */
 
 import {
@@ -508,70 +506,28 @@ function ensureDemoAccountsInStore(store: Store): boolean {
   return changed;
 }
 
-function canUseStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+let memoryStore: Store | null = null;
+
+function dropDomainStorage() {
+  if (typeof window === "undefined" || typeof window.localStorage === "undefined") return;
+  try {
+    window.localStorage.removeItem(DB_KEY);
+    window.localStorage.removeItem(LEGACY_DB_KEY);
+  } catch {
+    /* private mode */
+  }
 }
 
 function readStore(): Store {
-  if (!canUseStorage()) return buildSeed();
-  try {
-    let raw = window.localStorage.getItem(DB_KEY);
-    if (!raw) {
-      const legacy = window.localStorage.getItem(LEGACY_DB_KEY);
-      if (legacy) {
-        window.localStorage.setItem(DB_KEY, legacy);
-        raw = legacy;
-      }
-    }
-    if (!raw) {
-      const seeded = buildSeed();
-      window.localStorage.setItem(DB_KEY, JSON.stringify(seeded));
-      return seeded;
-    }
-    const parsed = JSON.parse(raw) as Store;
-    if (parsed?.version !== 1 || !Array.isArray(parsed.users)) {
-      const seeded = buildSeed();
-      window.localStorage.setItem(DB_KEY, JSON.stringify(seeded));
-      return seeded;
-    }
-    const store: Store = {
-      ...emptyStore(),
-      ...parsed,
-      users: parsed.users ?? [],
-      professionals: parsed.professionals ?? [],
-      slots: parsed.slots ?? [],
-      bookings: parsed.bookings ?? [],
-      sessionUserId: parsed.sessionUserId ?? null,
-      theme: "dark",
-    };
-    const demoChanged = ensureDemoAccountsInStore(store);
-    const approvedChanged = ensureAutoApprovedProfessionals(store);
-    if (demoChanged || approvedChanged) {
-      try {
-        window.localStorage.setItem(DB_KEY, JSON.stringify(store));
-      } catch {
-        /* ignore */
-      }
-    }
-    return store;
-  } catch {
-    const seeded = buildSeed();
-    try {
-      window.localStorage.setItem(DB_KEY, JSON.stringify(seeded));
-    } catch {
-      /* ignore */
-    }
-    return seeded;
+  if (!memoryStore) {
+    memoryStore = buildSeed();
+    dropDomainStorage();
   }
+  return memoryStore;
 }
 
-function persist(store: Store) {
-  if (!canUseStorage()) return;
-  try {
-    window.localStorage.setItem(DB_KEY, JSON.stringify(store));
-  } catch {
-    /* private mode / quota — keep in-memory seed behavior on next read */
-  }
+function persist(_store: Store) {
+  dropDomainStorage();
 }
 
 function mutate(fn: (store: Store) => void): Store {

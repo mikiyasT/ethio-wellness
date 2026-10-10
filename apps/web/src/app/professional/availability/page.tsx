@@ -5,6 +5,7 @@ import { SlotChip } from "@/components/domain/slot-chip";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
 import {
+  addDays,
   calendarCells,
   eatDateAndHour,
   eatTodayIso,
@@ -13,6 +14,7 @@ import {
   hasOpenSlots,
   hoursForDate,
   loadSlotsForProfessional,
+  MIN_LEAD_DAYS,
   parseIsoDate,
   serializeSlots,
   toIsoDate,
@@ -22,7 +24,7 @@ import type { DbSlot } from "@/lib/db";
 import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { fetchProfessionalBookings } from "@/lib/bookings-api";
-import { fetchMyAvailability, saveMyAvailability, type MySlot } from "@/lib/pro-api";
+import { fetchMyAvailability, ProRequestError, saveMyAvailability, type MySlot } from "@/lib/pro-api";
 import { defaultProfessionalStatus } from "@/lib/pro-approval";
 import { usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
@@ -43,17 +45,23 @@ function AvailabilityInner() {
   const fromOnboarding = search.get("from") === "onboarding";
 
   const todayIso = useMemo(() => (usePublicApi() ? eatTodayIso() : toIsoDate(new Date())), []);
+  const minDateIso = useMemo(() => addDays(todayIso, MIN_LEAD_DAYS), [todayIso]);
+  const leadLabel = useMemo(
+    () => parseIsoDate(minDateIso).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    [minDateIso],
+  );
   const [proId, setProId] = useState<string | null>(null);
   const [slots, setSlots] = useState<DbSlot[]>([]);
   const [baselineSlots, setBaselineSlots] = useState<DbSlot[]>([]);
   const [bookedMetaBySlotId, setBookedMetaBySlotId] = useState<Record<string, BookedSlotMeta>>({});
-  const [selectedDate, setSelectedDate] = useState(todayIso);
+  const [selectedDate, setSelectedDate] = useState(minDateIso);
   const [viewMonth, setViewMonth] = useState(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
+    const start = parseIsoDate(minDateIso);
+    return { year: start.getFullYear(), month: start.getMonth() };
   });
   const [savedMsg, setSavedMsg] = useState(false);
   const [info, setInfo] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [confirmCloseDay, setConfirmCloseDay] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<DbSlot | null>(null);
 
@@ -105,8 +113,8 @@ function AvailabilityInner() {
         setSlots(loaded);
         setBaselineSlots(loaded);
         await loadBookedMeta(user.professionalId, loaded);
-        const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso;
-        const start = firstOpen ?? todayIso;
+        const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= minDateIso)?.dateIso;
+        const start = firstOpen ?? minDateIso;
         setSelectedDate(start);
         const d = parseIsoDate(start);
         setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
@@ -121,13 +129,13 @@ function AvailabilityInner() {
       setSlots(loaded);
       setBaselineSlots(loaded);
       await loadBookedMeta(pro.id, loaded);
-      const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso;
-      const start = firstOpen ?? todayIso;
+      const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= minDateIso)?.dateIso;
+      const start = firstOpen ?? minDateIso;
       setSelectedDate(start);
       const d = parseIsoDate(start);
       setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
     })();
-  }, [ready, user.userId, user.professionalId, todayIso]);
+  }, [ready, user.userId, user.professionalId, todayIso, minDateIso]);
 
   const daySlots = useMemo(
     () => (proId ? hoursForDate(selectedDate, slots, proId) : []),
@@ -140,7 +148,7 @@ function AvailabilityInner() {
   const dirty = serializeSlots(slots) !== serializeSlots(baselineSlots);
 
   function selectDate(iso: string) {
-    if (iso < todayIso) return;
+    if (iso < minDateIso) return;
     setSelectedDate(iso);
     setSavedMsg(false);
     setInfo("");
@@ -200,16 +208,33 @@ function AvailabilityInner() {
     if (!proId || !user.userId) return;
     if (usePublicApi()) {
       const hours = slots
-        .filter((slot) => slot.status === "open")
+        .filter((slot) => slot.status === "open" && slot.dateIso >= minDateIso)
         .map((slot) => ({ date: slot.dateIso, time: slot.timeLabel }));
-      const loaded = (await saveMyAvailability(hours)).map((slot) => slotInEat(slot, proId));
-      setSlots(loaded);
-      setBaselineSlots(loaded);
-      await loadBookedMeta(proId, loaded);
-      setSavedMsg(true);
-      setInfo("");
-      setConfirmCloseDay(false);
-      if (fromOnboarding) router.push(routes.professionalPending);
+      setSaveError("");
+      try {
+        const loaded = (await saveMyAvailability(hours)).map((slot) => slotInEat(slot, proId));
+        setSlots(loaded);
+        setBaselineSlots(loaded);
+        await loadBookedMeta(proId, loaded);
+        setSavedMsg(true);
+        setInfo("");
+        setConfirmCloseDay(false);
+        if (fromOnboarding) router.push(routes.professionalPending);
+      } catch (err) {
+        setSavedMsg(false);
+        setConfirmCloseDay(false);
+        if (err instanceof ProRequestError && err.code === "availability_too_soon") {
+          const when = parseIsoDate(err.minDate ?? minDateIso).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+          setSaveError(
+            `availability_too_soon. Slots open from ${when} — always at least 2 days ahead, so you have prep time`,
+          );
+          return;
+        }
+        setSaveError(err instanceof Error ? err.message : "Could not save your hours.");
+      }
       return;
     }
     const compact = slots.filter((slot) => slot.status === "open" || slot.status === "booked");
@@ -279,6 +304,9 @@ function AvailabilityInner() {
       ) : null}
       <h1 className="mt-2 text-3xl font-bold text-ink">{t("proAvail.title")}</h1>
       <p className="mt-2 text-ink-2">{t("proAvail.sub")}</p>
+      <p className="mt-2 text-sm text-ink-2">
+        Slots open from {leadLabel} — always at least 2 days ahead, so you have prep time
+      </p>
 
       <section className="mt-6 rounded-2xl border border-border bg-surface p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2">
@@ -312,7 +340,7 @@ function AvailabilityInner() {
         <div className="mt-1 grid grid-cols-7 gap-1">
           {cells.map((iso, index) => {
             if (!iso) return <div key={`pad-${index}`} />;
-            const isPast = iso < todayIso;
+            const isTooSoon = iso < minDateIso;
             const isSelected = iso === selectedDate;
             const isToday = iso === todayIso;
             const dayHasOpen = hasOpenSlots(hoursForDate(iso, slots, proId));
@@ -320,12 +348,12 @@ function AvailabilityInner() {
               <button
                 key={iso}
                 type="button"
-                disabled={isPast}
+                disabled={isTooSoon}
                 onClick={() => selectDate(iso)}
                 className={[
                   "relative flex min-h-11 flex-col items-center justify-center rounded-xl text-sm",
-                  isPast && "cursor-not-allowed text-ink-3 opacity-40",
-                  !isPast && !isSelected && "text-ink hover:bg-avail-tint",
+                  isTooSoon && "cursor-not-allowed text-ink-3 opacity-40",
+                  !isTooSoon && !isSelected && "text-ink hover:bg-avail-tint",
                   isSelected && "bg-avail font-semibold text-white",
                   !isSelected && isToday && "ring-1 ring-avail",
                 ]
@@ -424,6 +452,11 @@ function AvailabilityInner() {
       {info ? (
         <div className="mt-4">
           <Alert tone={confirmCloseDay ? "warning" : "info"}>{info}</Alert>
+        </div>
+      ) : null}
+      {saveError ? (
+        <div className="mt-4">
+          <Alert tone="error">{saveError}</Alert>
         </div>
       ) : null}
       {savedMsg && !fromOnboarding ? (

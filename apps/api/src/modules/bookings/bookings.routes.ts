@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { allowRequest, clientAddress } from "../../lib/rate-limit.js";
 import { readCookie, SESSION_COOKIE } from "../../lib/session-cookie.js";
 import { AuthError, professionalFromCookie, userForSessionToken } from "../auth/auth.service.js";
 import {
@@ -28,6 +29,8 @@ const guestSchema = z.object({
   guestNote: z.string().trim().max(1000).optional(),
 });
 
+const LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
 function sendError(res: { status: (code: number) => { json: (body: unknown) => void } }, error: unknown) {
   if (error instanceof BookingError || error instanceof AuthError) {
     res.status(error.status).json({ error: error.code });
@@ -36,7 +39,19 @@ function sendError(res: { status: (code: number) => { json: (body: unknown) => v
   return false;
 }
 
+function limited(
+  req: { ip?: string; socket: { remoteAddress?: string | null } },
+  res: { status: (code: number) => { json: (body: unknown) => void } },
+  bucket: string,
+  limit: number,
+) {
+  if (allowRequest(`${bucket}:${clientAddress(req)}`, limit, LIMIT_WINDOW_MS)) return false;
+  res.status(429).json({ error: "rate_limited" });
+  return true;
+}
+
 bookingsRouter.post("/holds", async (req, res) => {
+  if (limited(req, res, "hold", 20)) return;
   const parsed = holdSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "invalid_body" });
@@ -68,6 +83,7 @@ bookingsRouter.patch("/holds/:id", async (req, res) => {
 });
 
 bookingsRouter.post("/holds/:id/checkout", async (req, res) => {
+  if (limited(req, res, "checkout", 10)) return;
   try {
     const checkout = await startCheckout(req.params.id);
     res.json(checkout);
@@ -77,6 +93,7 @@ bookingsRouter.post("/holds/:id/checkout", async (req, res) => {
 });
 
 bookingsRouter.get("/join", async (req, res) => {
+  if (limited(req, res, "join", 30)) return;
   const code = typeof req.query.code === "string" ? req.query.code : "";
   const email = typeof req.query.email === "string" ? req.query.email : "";
   if (!code || !email) {

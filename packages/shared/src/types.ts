@@ -46,6 +46,18 @@ export interface Professional {
   status?: "pending" | "approved";
 }
 
+/**
+ * Persisted availability. `startsAt` and `endsAt` are UTC instants.
+ * Day and clock labels are display-only and are not stored.
+ */
+export interface SlotInstant {
+  id: string;
+  professionalId: string;
+  startsAt: string;
+  endsAt: string;
+  status: SlotStatus;
+}
+
 export interface AvailabilitySlot {
   id: string;
   professionalId: string;
@@ -54,6 +66,24 @@ export interface AvailabilitySlot {
   status: SlotStatus;
   /** ISO date YYYY-MM-DD when known (professional availability editor). */
   date?: string;
+  /** UTC ISO-8601 instant when this slot came from the API. */
+  startsAt?: string;
+  /** UTC ISO-8601 instant when this slot came from the API. */
+  endsAt?: string;
+}
+
+/**
+ * Persisted booking window. Identity and payment fields stay on the API record.
+ * The browser formats `startsAt` for the booker and East Africa Time for the provider.
+ */
+export interface BookingInstant {
+  id: string;
+  professionalId: string;
+  slotId: string;
+  startsAt: string;
+  endsAt: string;
+  status: BookingStatus | "held";
+  sessionCode?: string | null;
 }
 
 export interface Booking {
@@ -65,6 +95,10 @@ export interface Booking {
   status: BookingStatus;
   linkState?: SessionLinkState;
   cancelledBy?: "client" | "professional";
+  /** UTC ISO-8601 instant when this booking came from the API. */
+  startsAt?: string;
+  /** UTC ISO-8601 instant when this booking came from the API. */
+  endsAt?: string;
 }
 
 export interface Client {
