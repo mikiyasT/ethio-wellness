@@ -73,6 +73,10 @@ curl -s -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 Forgot-password does not send email yet. Outside production, the API log prints the reset link.
 
+### Provider hours and profile (Phase D)
+
+A signed-in professional loads and saves their own rows only. `GET` and `PUT /availability/me` use East Africa Time hour picks (`date` + `time` such as `10:00 AM`). The API stores UTC `startsAt` / `endsAt`. Booked and held hours are left in place. `GET` and `PATCH /professionals/me` read and update the profile, specialties, and fee. Pending professionals can save before they are approved; those hours show on the public profile only after approval.
+
 ## Spec rules followed
 
 - Guests can browse services and professionals without an account

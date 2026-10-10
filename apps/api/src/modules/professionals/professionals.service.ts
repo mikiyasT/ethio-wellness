@@ -64,6 +64,55 @@ export async function getApprovedProfessional(slug: string) {
   return toPublicProfessional(pro);
 }
 
+function initialsOf(name: string) {
+  const letters = name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return letters || "?";
+}
+
+export async function getMyProfessional(professionalId: string) {
+  const pro = await prisma.professional.findUnique({ where: { id: professionalId } });
+  if (!pro) return null;
+  return toPublicProfessional(pro);
+}
+
+export async function updateMyProfessional(
+  professionalId: string,
+  input: {
+    name?: string;
+    title?: string;
+    city?: string;
+    credentials?: string;
+    bio?: string;
+    practiceMore?: string;
+    languages?: string[];
+    specialties?: string[];
+    feeCents?: number;
+  },
+) {
+  if (input.languages?.some((id) => !allowedLanguages.has(id))) return "invalid_catalog" as const;
+  if (input.specialties?.some((id) => !allowedCategories.has(id))) return "invalid_catalog" as const;
+  const pro = await prisma.professional.update({
+    where: { id: professionalId },
+    data: {
+      ...(input.name !== undefined ? { name: input.name, initials: initialsOf(input.name) } : {}),
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.city !== undefined ? { city: input.city } : {}),
+      ...(input.credentials !== undefined ? { credentials: input.credentials } : {}),
+      ...(input.bio !== undefined ? { bio: input.bio } : {}),
+      ...(input.practiceMore !== undefined ? { practiceMore: input.practiceMore } : {}),
+      ...(input.languages !== undefined ? { languages: input.languages } : {}),
+      ...(input.specialties !== undefined ? { specialties: input.specialties } : {}),
+      ...(input.feeCents !== undefined ? { feeCents: input.feeCents } : {}),
+    },
+  });
+  return toPublicProfessional(pro);
+}
+
 export async function listOpenAvailability(professionalId: string) {
   const slots = await prisma.slot.findMany({
     where: {

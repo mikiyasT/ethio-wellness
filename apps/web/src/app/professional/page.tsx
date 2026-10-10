@@ -4,7 +4,9 @@ import { categoryById, routes } from "@ethio-wellness/shared";
 import { SessionCard } from "@/components/domain/session-card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
+import { fetchMyAvailability } from "@/lib/pro-api";
 import { loadProDraftForUser } from "@/lib/pro-draft";
+import { usePublicApi } from "@/lib/public-api";
 import { AUTO_APPROVE_PROFESSIONALS, isAwaitingApproval } from "@/lib/pro-approval";
 import { guestDisplayName, guestFirstName } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
@@ -56,6 +58,17 @@ export default function ProfessionalHomePage() {
   useEffect(() => {
     if (!ready || !user.userId) return;
     void (async () => {
+      if (usePublicApi()) {
+        const draft = await loadProDraftForUser(user.userId!, user.name ?? "");
+        const slots = user.professionalId ? await fetchMyAvailability() : [];
+        setChecklist({
+          about: Boolean(draft.name && draft.title && draft.bio),
+          specs: draft.specialties.length > 0,
+          avail: slots.some((slot) => slot.status === "open"),
+        });
+        setHello(`Good afternoon, ${draft.name || user.name || "there"} 👋`);
+        return;
+      }
       const pro =
         (user.professionalId ? await db.professionals.getById(user.professionalId) : undefined) ??
         (await db.professionals.getByUserId(user.userId!));
