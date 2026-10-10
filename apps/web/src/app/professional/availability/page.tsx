@@ -21,6 +21,7 @@ import {
 import type { DbSlot } from "@/lib/db";
 import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { fetchProfessionalBookings } from "@/lib/bookings-api";
 import { fetchMyAvailability, saveMyAvailability, type MySlot } from "@/lib/pro-api";
 import { defaultProfessionalStatus } from "@/lib/pro-approval";
 import { usePublicApi } from "@/lib/public-api";
@@ -57,7 +58,9 @@ function AvailabilityInner() {
   const [pendingRemove, setPendingRemove] = useState<DbSlot | null>(null);
 
   async function loadBookedMeta(professionalId: string, proSlots: DbSlot[]) {
-    const bookings = await db.bookings.listForProfessional(professionalId);
+    const bookings = usePublicApi()
+      ? await fetchProfessionalBookings()
+      : await db.bookings.listForProfessional(professionalId);
     const meta: Record<string, BookedSlotMeta> = {};
     for (const booking of bookings) {
       if (booking.status === "cancelled") continue;

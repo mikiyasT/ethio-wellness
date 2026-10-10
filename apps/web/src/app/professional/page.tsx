@@ -4,11 +4,12 @@ import { categoryById, routes } from "@ethio-wellness/shared";
 import { SessionCard } from "@/components/domain/session-card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
+import { fetchProfessionalBookings } from "@/lib/bookings-api";
 import { fetchMyAvailability } from "@/lib/pro-api";
 import { loadProDraftForUser } from "@/lib/pro-draft";
 import { usePublicApi } from "@/lib/public-api";
 import { AUTO_APPROVE_PROFESSIONALS, isAwaitingApproval } from "@/lib/pro-approval";
-import { guestDisplayName, guestFirstName } from "@/lib/guest-booking";
+import { formatProviderEat, guestDisplayName, guestFirstName } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import { useRouter } from "next/navigation";
@@ -66,6 +67,8 @@ export default function ProfessionalHomePage() {
           specs: draft.specialties.length > 0,
           avail: slots.some((slot) => slot.status === "open"),
         });
+        const bookings = user.professionalId ? await fetchProfessionalBookings() : [];
+        setUpcoming(bookings.filter((booking) => booking.status === "upcoming"));
         setHello(`Good afternoon, ${draft.name || user.name || "there"} 👋`);
         return;
       }
@@ -186,7 +189,7 @@ export default function ProfessionalHomePage() {
                         </span>
                       ) : null}
                     </p>
-                    <p className="text-sm text-ink-2">{booking.dateLabel}</p>
+                    <p className="text-sm text-ink-2">{formatProviderEat(booking.slotAt)}</p>
                   </div>
                   <p className="text-sm text-ink-3">{guestFirstName(booking)}</p>
                 </article>

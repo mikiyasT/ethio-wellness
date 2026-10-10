@@ -5,7 +5,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
+import { fetchJoin } from "@/lib/bookings-api";
 import { db, formatFee, type DbBooking, type DbProfessional } from "@/lib/db";
+import { usePublicApi } from "@/lib/public-api";
 import {
   buildIcsCalendar,
   downloadIcs,
@@ -47,7 +49,8 @@ export default function JoinRecoveryPage() {
     }
     setLoading(true);
     try {
-      const found = await db.bookings.findBySessionCodeAndEmail(sessionCode, guestEmail);
+      const apiFound = usePublicApi() ? await fetchJoin(sessionCode, guestEmail) : null;
+      const found = usePublicApi() ? apiFound?.booking : await db.bookings.findBySessionCodeAndEmail(sessionCode, guestEmail);
       if (!found) {
         setError(t("join.notFound"));
         setBooking(null);
@@ -60,7 +63,9 @@ export default function JoinRecoveryPage() {
         setProfessional(null);
         return;
       }
-      const pro = (await db.professionals.getById(found.professionalId)) ?? null;
+      const pro = usePublicApi()
+        ? (apiFound?.professional ?? null)
+        : ((await db.professionals.getById(found.professionalId)) ?? null);
       setBooking(found);
       setProfessional(pro);
       setCode(found.sessionCode);

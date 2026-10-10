@@ -5,6 +5,7 @@ import { CategoryCard } from "@/components/domain/category-card";
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { SessionCard } from "@/components/domain/session-card";
 import { ButtonLink } from "@/components/ui/button";
+import { fetchMyBookings } from "@/lib/bookings-api";
 import { db, toCardProfessional, type DbBooking } from "@/lib/db";
 import { fetchApprovedProfessionals, usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
@@ -22,12 +23,19 @@ export default function ClientHomePage() {
   useEffect(() => {
     if (!ready || !user.userId) return;
     void (async () => {
-      const bookings = await db.bookings.listForClient(user.userId!);
-      const upcoming = bookings.find((booking) => booking.status === "upcoming") ?? null;
-      setNext(upcoming);
-      if (upcoming) {
-        const pro = await db.professionals.getById(upcoming.professionalId);
-        if (pro) setProfessional(toCardProfessional(pro));
+      if (usePublicApi()) {
+        const rows = await fetchMyBookings();
+        const upcoming = rows.find((row) => row.booking.status === "upcoming") ?? null;
+        setNext(upcoming?.booking ?? null);
+        if (upcoming) setProfessional(toCardProfessional(upcoming.professional));
+      } else {
+        const bookings = await db.bookings.listForClient(user.userId!);
+        const upcoming = bookings.find((booking) => booking.status === "upcoming") ?? null;
+        setNext(upcoming);
+        if (upcoming) {
+          const pro = await db.professionals.getById(upcoming.professionalId);
+          if (pro) setProfessional(toCardProfessional(pro));
+        }
       }
       const approved = usePublicApi()
         ? await fetchApprovedProfessionals()

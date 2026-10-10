@@ -17,6 +17,7 @@ import {
   toIsoDate,
 } from "@/lib/availability-editor";
 import { bookPath } from "@/lib/booking";
+import { createHold } from "@/lib/bookings-api";
 import { db, formatFee, toCardProfessional, type DbProfessional, type DbSlot } from "@/lib/db";
 import { fetchOpenSlots, fetchProfessionalBySlug, usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
@@ -140,7 +141,9 @@ export default function ProfessionalDetailPage() {
 
   async function reloadSlots() {
     if (!dbPro) return;
-    const list = await db.slots.listForProfessional(dbPro.id);
+    const list = usePublicApi()
+      ? await fetchOpenSlots(dbPro.slug, dbPro.id)
+      : await db.slots.listForProfessional(dbPro.id);
     setSlots(list);
   }
 
@@ -149,11 +152,13 @@ export default function ProfessionalDetailPage() {
     setBusy(true);
     setError("");
     try {
-      const hold = await db.bookings.createHold({
-        professionalId: dbPro.id,
-        slotId: selectedSlot.id,
-        clientId: role === "client" ? user.userId : undefined,
-      });
+      const hold = usePublicApi()
+        ? await createHold(selectedSlot.id)
+        : await db.bookings.createHold({
+            professionalId: dbPro.id,
+            slotId: selectedSlot.id,
+            clientId: role === "client" ? user.userId : undefined,
+          });
       trackPixel("InitiateCheckout", { value: dbPro.fee, currency: "USD" });
       setChoiceOpen(false);
       router.push(`${bookPath(professional.slug, selectedSlot.id)}&hold=${hold.id}`);

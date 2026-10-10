@@ -19,7 +19,7 @@ export function apiBase() {
   return `${protocol}//${host}:${port}`;
 }
 
-/** Public reads (directory, profile, open hours) come from the API when this is true. Writes stay in localStorage. */
+/** Directory, profile, hours, and booking use the API when this is true. */
 export function usePublicApi() {
   return process.env.NEXT_PUBLIC_USE_API === "true";
 }

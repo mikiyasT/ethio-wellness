@@ -3,7 +3,9 @@
 import { categoryById } from "@ethio-wellness/shared";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
+import { fetchProfessionalBookings } from "@/lib/bookings-api";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
+import { usePublicApi } from "@/lib/public-api";
 import { formatProviderEat, guestDisplayName, guestFirstName } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
@@ -29,6 +31,10 @@ export default function ProfessionalBookingsPage() {
   useEffect(() => {
     if (!ready || !user.userId) return;
     void (async () => {
+      if (usePublicApi()) {
+        setBookings(await fetchProfessionalBookings());
+        return;
+      }
       const pro =
         (user.professionalId ? await db.professionals.getById(user.professionalId) : undefined) ??
         (await db.professionals.getByUserId(user.userId!));

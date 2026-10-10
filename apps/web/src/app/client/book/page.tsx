@@ -1,13 +1,15 @@
 "use client";
 
-import { routes } from "@ethio-wellness/shared";
+import { categoryById, routes } from "@ethio-wellness/shared";
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
 import { TextAreaField, TextField } from "@/components/ui/field";
 import { resolveBookingContext } from "@/lib/booking";
-import { db, type DbBooking, type DbProfessional, type DbSlot } from "@/lib/db";
+import { createHold, fetchBooking, slotFromBooking, updateHold } from "@/lib/bookings-api";
+import { db, formatFee, type DbBooking, type DbProfessional, type DbSlot } from "@/lib/db";
 import { formatBookerLocal, SLOT_HOLD_MINUTES } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
+import { fetchOpenSlots, fetchProfessionalBySlug, usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
@@ -36,6 +38,42 @@ function ClientBookInner() {
 
   useEffect(() => {
     void (async () => {
+      if (usePublicApi()) {
+        if (!proSlug) return;
+        const pro = await fetchProfessionalBySlug(proSlug);
+        if (!pro) {
+          setError("This counselor is not available.");
+          return;
+        }
+        setProfessional(pro);
+        setSpecialtyName(categoryById(pro.specialties[0] ?? "")?.name ?? "Session");
+        setFee(formatFee(pro.fee));
+        if (holdId) {
+          const found = await fetchBooking(holdId);
+          if (found?.booking.status === "held") {
+            setHold(found.booking);
+            setSlot(slotFromBooking(found.booking));
+            setFee(formatFee(found.booking.fee));
+            if (found.booking.guestFirstName) setFirstName(found.booking.guestFirstName);
+            if (found.booking.guestLastName) setLastName(found.booking.guestLastName);
+            if (found.booking.guestEmail) setEmail(found.booking.guestEmail);
+            if (found.booking.guestPhone) setPhone(found.booking.guestPhone);
+            if (found.booking.guestNote) setNote(found.booking.guestNote);
+          } else {
+            setError("Your 10-minute hold expired. Please pick the slot again.");
+          }
+        } else if (slotId) {
+          const open = await fetchOpenSlots(pro.slug, pro.id);
+          setSlot(open.find((item) => item.id === slotId));
+        }
+        if (role === "client" && user.name) {
+          const parts = user.name.trim().split(/\s+/);
+          setFirstName((current) => current || parts[0] || "");
+          setLastName((current) => current || parts.slice(1).join(" "));
+          setEmail((current) => current || user.email || "");
+        }
+        return;
+      }
       await db.bookings.releaseExpiredHolds();
       const ctx = await resolveBookingContext(proSlug, slotId);
       setProfessional(ctx.professional);
@@ -76,6 +114,33 @@ function ClientBookInner() {
     setError("");
 
     try {
+      if (usePublicApi()) {
+        let bookingId = hold?.id;
+        if (!bookingId) {
+          if (!slot) return;
+          const created = await createHold(slot.id);
+          bookingId = created.id;
+          setHold(created);
+        }
+        if (isGuest) {
+          await updateHold(bookingId, {
+            guestFirstName: firstName,
+            guestLastName: lastName,
+            guestEmail: email,
+            guestPhone: phone,
+            guestNote: note,
+          });
+        } else {
+          await updateHold(bookingId, {});
+        }
+        const params = new URLSearchParams({
+          pro: professional.slug,
+          slot: slot?.id ?? "",
+          hold: bookingId,
+        });
+        router.push(`${routes.clientPayment}?${params.toString()}`);
+        return;
+      }
       let bookingId = hold?.id;
       if (!bookingId) {
         const created = await db.bookings.createHold({

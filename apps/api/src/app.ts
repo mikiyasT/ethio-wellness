@@ -8,6 +8,7 @@ import { bookingsRouter } from "./modules/bookings/bookings.routes.js";
 import { categoriesRouter } from "./modules/categories/categories.routes.js";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { professionalsRouter } from "./modules/professionals/professionals.routes.js";
+import { stripeWebhook } from "./modules/stripe/stripe.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
 
 function isPrivateLanHost(hostname: string) {
@@ -42,6 +43,9 @@ export function createApp() {
       credentials: true,
     }),
   );
+  app.post("/stripe/webhook", express.raw({ type: "application/json" }), (req, res, next) => {
+    void stripeWebhook(req, res).catch(next);
+  });
   app.use(express.json());
 
   app.use("/health", healthRouter);

@@ -3,7 +3,9 @@
 import { categoryById, routes } from "@ethio-wellness/shared";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { pollBooking } from "@/lib/bookings-api";
 import { db, formatFee, type DbBooking, type DbProfessional } from "@/lib/db";
+import { usePublicApi } from "@/lib/public-api";
 import {
   buildIcsCalendar,
   downloadIcs,
@@ -24,11 +26,26 @@ function BookingConfirmationInner() {
   const [booking, setBooking] = useState<DbBooking | null>(null);
   const [professional, setProfessional] = useState<DbProfessional | null>(null);
   const [dismissCta, setDismissCta] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     trackPixel("PageView");
     void (async () => {
       if (!bookingId) return;
+      if (usePublicApi()) {
+        setWaiting(true);
+        const found = await pollBooking(bookingId);
+        setWaiting(false);
+        if (!found || found.booking.status === "held") return;
+        if (found.booking.status === "cancelled") {
+          setFailed(true);
+          return;
+        }
+        setBooking(found.booking);
+        setProfessional(found.professional);
+        return;
+      }
       const found = await db.bookings.getById(bookingId);
       if (!found) return;
       setBooking(found);
@@ -36,8 +53,20 @@ function BookingConfirmationInner() {
     })();
   }, [bookingId]);
 
+  if (failed) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center text-ink-2">
+        This payment did not confirm the booking. The time may already have been released.
+      </div>
+    );
+  }
+
   if (!booking || !professional) {
-    return <div className="p-8 text-center text-ink-2">Loading confirmation…</div>;
+    return (
+      <div className="p-8 text-center text-ink-2">
+        {waiting || !bookingId ? "Loading confirmation…" : "Waiting for Stripe to confirm your payment…"}
+      </div>
+    );
   }
 
   const whenLocal = formatBookerLocal(booking.slotAt);
