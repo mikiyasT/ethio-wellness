@@ -56,6 +56,23 @@ curl -s http://localhost:4000/professionals
 curl -s http://localhost:4000/professionals/hana-tesfaye/availability
 ```
 
+### Sign-in (Phase C)
+
+Register, login, logout, and the current user use an `ayzon_session` cookie (`httpOnly`). The value stored in Postgres is a hash of the cookie. Locally `COOKIE_SECURE=false`, so the cookie is `SameSite=Lax` and works between port 3000 and port 4000 on the same host. Production must set `COOKIE_SECURE=true`, which sends `SameSite=None; Secure` for a separate web and API host.
+
+Seeded accounts use the password `AyzonDemo!2026`. Examples: `test.client@example.com` (client) and `test.provider@example.com` (professional, stays pending). A new professional is pending and does not appear in `GET /professionals` until approved:
+
+```bash
+curl -s -c /tmp/ayzon.cookies -H 'Content-Type: application/json' \
+  -d '{"email":"test.client@example.com","password":"AyzonDemo!2026"}' \
+  http://localhost:4000/auth/login
+curl -s -b /tmp/ayzon.cookies http://localhost:4000/auth/me
+curl -s -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:4000/admin/professionals/PROFESSIONAL_ID/approve
+```
+
+Forgot-password does not send email yet. Outside production, the API log prints the reset link.
+
 ## Spec rules followed
 
 - Guests can browse services and professionals without an account

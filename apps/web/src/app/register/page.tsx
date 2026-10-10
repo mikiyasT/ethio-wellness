@@ -4,6 +4,7 @@ import { routes } from "@ethio-wellness/shared";
 import { BrandMark } from "@/components/brand-mark";
 import { Alert } from "@/components/ui/alert";
 import { TextField } from "@/components/ui/field";
+import { REGISTER_DRAFT_KEY } from "@/lib/auth-api";
 import { useLocale } from "@/lib/locale";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -29,10 +30,15 @@ function RegisterInner() {
     if (Object.keys(next).length > 0) return;
 
     const held = search.get("next");
+    const normalizedEmail = email.toLowerCase();
+    sessionStorage.setItem(
+      REGISTER_DRAFT_KEY,
+      JSON.stringify({ name, email: normalizedEmail, password }),
+    );
     const params = new URLSearchParams();
     if (held) params.set("next", held);
     params.set("name", name);
-    params.set("email", email.toLowerCase());
+    params.set("email", normalizedEmail);
     router.push(`${routes.roleSelection}?${params.toString()}`);
   }
 

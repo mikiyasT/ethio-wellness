@@ -61,18 +61,7 @@ export async function mockLoginByIdentifier(identifier: string): Promise<DbUser>
   const byName = await db.users.findByName(key);
   if (byName) return byName;
 
-  // Unknown → create a client for the pilot
-  const local = key.includes("@") ? key.split("@")[0]! : key;
-  const name = local
-    .split(/[._\s-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-  return db.users.create({
-    name: name || "Member",
-    email: key.includes("@") ? key : `${compact || "member"}@example.com`,
-    role: "client",
-  });
+  throw new Error("No account found for that username or email.");
 }
 
 /** @deprecated use mockLoginByIdentifier */

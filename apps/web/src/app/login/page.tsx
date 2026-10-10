@@ -4,10 +4,12 @@ import { routes } from "@ethio-wellness/shared";
 import { BrandMark } from "@/components/brand-mark";
 import { Alert } from "@/components/ui/alert";
 import { TextField } from "@/components/ui/field";
+import { AuthRequestError, DEMO_PASSWORD, loginAccount } from "@/lib/auth-api";
 import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { DEMO_CLIENT, DEMO_PROVIDER, mockLoginByIdentifier } from "@/lib/mock-auth";
-import { AUTO_APPROVE_PROFESSIONALS } from "@/lib/pro-approval";
+import { isAwaitingApproval } from "@/lib/pro-approval";
+import { usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -33,16 +35,40 @@ function LoginInner() {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
-  const { setSessionFromUser, role, ready } = useSession();
+  const { setSessionFromUser, refresh, role, ready } = useSession();
   const [identifier, setIdentifier] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; form?: string }>({});
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
 
   useEffect(() => {
     if (!ready || role === "guest") return;
     router.replace(role === "professional" ? routes.professionalHome : routes.clientHome);
   }, [ready, role, router]);
 
-  async function completeLogin(rawId: string) {
+  async function completeLogin(rawId: string, rawPassword: string) {
+    if (usePublicApi()) {
+      const email = rawId.trim().toLowerCase();
+      if (!email.includes("@")) throw new Error("Enter the email address for this account.");
+      if (!rawPassword) throw new Error("Enter your password.");
+      let user;
+      try {
+        const result = await loginAccount(email, rawPassword);
+        user = result.user;
+      } catch (error) {
+        if (error instanceof AuthRequestError && error.code === "invalid_credentials") {
+          throw new Error("That email and password do not match.");
+        }
+        throw error;
+      }
+      await refresh();
+      if (user.role === "professional") {
+        router.push(isAwaitingApproval(user.professionalStatus) ? routes.professionalPending : routes.professionalHome);
+        return;
+      }
+      router.push(postLoginDestination("client", search.get("next")));
+      return;
+    }
+
     const dbUser = await mockLoginByIdentifier(rawId);
     await setSessionFromUser(dbUser);
 
@@ -50,7 +76,7 @@ function LoginInner() {
       const pro = dbUser.professionalId
         ? await db.professionals.getById(dbUser.professionalId)
         : await db.professionals.getByUserId(dbUser.id);
-      if (!AUTO_APPROVE_PROFESSIONALS && pro?.status === "pending") {
+      if (isAwaitingApproval(pro?.status)) {
         router.push(routes.professionalPending);
         return;
       }
@@ -65,14 +91,15 @@ function LoginInner() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const emailOrName = String(data.get("email") ?? identifier).trim();
+    const enteredPassword = String(data.get("password") ?? password);
     const nextErrors: typeof errors = {};
-    if (!emailOrName) nextErrors.email = "Enter your username or email";
+    if (!emailOrName) nextErrors.email = usePublicApi() ? "Enter your email" : "Enter your username or email";
+    if (usePublicApi() && !enteredPassword) nextErrors.password = "Enter your password";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     try {
-      // TODO: replace with real auth — no passwords stored
-      await completeLogin(emailOrName);
+      await completeLogin(emailOrName, enteredPassword);
     } catch (err) {
       setErrors({
         form: err instanceof Error ? err.message : "Could not sign in. Please try again.",
@@ -80,11 +107,12 @@ function LoginInner() {
     }
   }
 
-  async function quickLogin(name: string) {
-    setIdentifier(name);
+  async function quickLogin(email: string) {
+    setIdentifier(email);
+    setPassword(DEMO_PASSWORD);
     setErrors({});
     try {
-      await completeLogin(name);
+      await completeLogin(email, DEMO_PASSWORD);
     } catch (err) {
       setErrors({
         form: err instanceof Error ? err.message : "Could not sign in. Please try again.",
@@ -110,45 +138,47 @@ function LoginInner() {
         ) : null}
 
         <div className="mt-6 space-y-2 rounded-2xl border border-border bg-surface-warm p-4">
-          <p className="text-sm font-medium text-ink">Demo accounts (no password)</p>
+          <p className="text-sm font-medium text-ink">Seeded demo accounts</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              onClick={() => void quickLogin(DEMO_CLIENT.name)}
+              onClick={() => void quickLogin(DEMO_CLIENT.email)}
               className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-border bg-surface px-4 text-sm font-semibold text-ink hover:bg-primary-tint"
             >
               {DEMO_CLIENT.name}
             </button>
             <button
               type="button"
-              onClick={() => void quickLogin(DEMO_PROVIDER.name)}
+              onClick={() => void quickLogin(DEMO_PROVIDER.email)}
               className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-border bg-surface px-4 text-sm font-semibold text-ink hover:bg-primary-tint"
             >
               {DEMO_PROVIDER.name}
             </button>
           </div>
           <p className="text-xs text-ink-3">
-            Or type <span className="font-medium">test client</span> /{" "}
-            <span className="font-medium">test provider</span> below.
+            Password for every seeded account: <span className="font-medium">{DEMO_PASSWORD}</span>
           </p>
         </div>
 
         <form className="mt-6 space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextField
-            label="Username or email"
+            label={usePublicApi() ? t("login.email") : "Username or email"}
             name="email"
-            type="text"
+            type={usePublicApi() ? "email" : "text"}
             autoComplete="username"
-            placeholder="test client"
+            placeholder={DEMO_CLIENT.email}
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             error={errors.email}
           />
           <TextField
-            label={`${t("login.password")} (optional for demo)`}
+            label={t("login.password")}
             name="password"
             type="password"
-            placeholder="Leave blank for demo accounts"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            error={errors.password}
           />
           <div className="text-right">
             <Link href={routes.forgotPassword} className="text-sm text-teal-accent hover:underline">
