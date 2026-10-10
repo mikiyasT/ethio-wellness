@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { ProfessionalStatus, UserRole } from "@prisma/client";
 import { env } from "../../config/env.js";
-import { hashToken, newOpaqueToken } from "../../lib/session-cookie.js";
+import { hashToken, newOpaqueToken, readCookie, SESSION_COOKIE } from "../../lib/session-cookie.js";
 import { prisma } from "../../lib/prisma.js";
 
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -160,6 +160,13 @@ export async function userForSessionToken(token: string | undefined) {
     return null;
   }
   return toPublicUser(session.user);
+}
+
+export async function professionalFromCookie(cookieHeader: string | undefined) {
+  const user = await userForSessionToken(readCookie(cookieHeader, SESSION_COOKIE));
+  if (!user) throw new AuthError(401, "unauthenticated");
+  if (user.role !== "professional" || !user.professionalId) throw new AuthError(403, "forbidden");
+  return user;
 }
 
 export async function deleteSession(token: string | undefined) {

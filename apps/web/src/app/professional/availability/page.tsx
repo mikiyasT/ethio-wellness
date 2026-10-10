@@ -6,6 +6,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
 import {
   calendarCells,
+  eatDateAndHour,
+  eatTodayIso,
   formatDayChip,
   formatMonthTitle,
   hasOpenSlots,
@@ -19,7 +21,9 @@ import {
 import type { DbSlot } from "@/lib/db";
 import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
+import { fetchMyAvailability, saveMyAvailability, type MySlot } from "@/lib/pro-api";
 import { defaultProfessionalStatus } from "@/lib/pro-approval";
+import { usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -37,7 +41,7 @@ function AvailabilityInner() {
   const { setSession, user, ready, refresh } = useSession();
   const fromOnboarding = search.get("from") === "onboarding";
 
-  const todayIso = useMemo(() => toIsoDate(new Date()), []);
+  const todayIso = useMemo(() => (usePublicApi() ? eatTodayIso() : toIsoDate(new Date())), []);
   const [proId, setProId] = useState<string | null>(null);
   const [slots, setSlots] = useState<DbSlot[]>([]);
   const [baselineSlots, setBaselineSlots] = useState<DbSlot[]>([]);
@@ -91,6 +95,20 @@ function AvailabilityInner() {
   useEffect(() => {
     if (!ready || !user.userId) return;
     void (async () => {
+      if (usePublicApi()) {
+        if (!user.professionalId) return;
+        setProId(user.professionalId);
+        const loaded = (await fetchMyAvailability()).map((slot) => slotInEat(slot, user.professionalId!));
+        setSlots(loaded);
+        setBaselineSlots(loaded);
+        await loadBookedMeta(user.professionalId, loaded);
+        const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso;
+        const start = firstOpen ?? todayIso;
+        setSelectedDate(start);
+        const d = parseIsoDate(start);
+        setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
+        return;
+      }
       const pro =
         (user.professionalId ? await db.professionals.getById(user.professionalId) : undefined) ??
         (await db.professionals.getByUserId(user.userId!));
@@ -177,6 +195,20 @@ function AvailabilityInner() {
 
   async function performSave() {
     if (!proId || !user.userId) return;
+    if (usePublicApi()) {
+      const hours = slots
+        .filter((slot) => slot.status === "open")
+        .map((slot) => ({ date: slot.dateIso, time: slot.timeLabel }));
+      const loaded = (await saveMyAvailability(hours)).map((slot) => slotInEat(slot, proId));
+      setSlots(loaded);
+      setBaselineSlots(loaded);
+      await loadBookedMeta(proId, loaded);
+      setSavedMsg(true);
+      setInfo("");
+      setConfirmCloseDay(false);
+      if (fromOnboarding) router.push(routes.professionalPending);
+      return;
+    }
     const compact = slots.filter((slot) => slot.status === "open" || slot.status === "booked");
     const existing = await loadSlotsForProfessional(proId);
     const booked = existing.filter((slot) => slot.status === "booked");
@@ -452,6 +484,19 @@ function AvailabilityInner() {
       ) : null}
     </div>
   );
+}
+
+function slotInEat(slot: MySlot, professionalId: string): DbSlot {
+  const { dateIso, timeLabel } = eatDateAndHour(new Date(slot.startsAt));
+  const status = slot.status === "held" ? "held" : slot.status === "booked" ? "booked" : "open";
+  return {
+    id: slot.id,
+    professionalId,
+    dateIso,
+    dayLabel: formatDayChip(dateIso),
+    timeLabel,
+    status,
+  };
 }
 
 async function replaceProfessionalSlots(professionalId: string, next: DbSlot[]) {
