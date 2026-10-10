@@ -82,5 +82,3 @@ export function resetAccountPassword(token: string, password: string) {
 }
 
 export const REGISTER_DRAFT_KEY = "ayzon-register-draft";
-
-export const DEMO_PASSWORD = "AyzonDemo!2026";

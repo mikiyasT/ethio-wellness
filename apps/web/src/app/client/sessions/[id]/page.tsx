@@ -5,7 +5,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cancelApiBooking, fetchBooking } from "@/lib/bookings-api";
 import { db, formatFeeExact, type DbBooking, type DbProfessional } from "@/lib/db";
+import { formatBookerLocal } from "@/lib/guest-booking";
+import { usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import Link from "next/link";
@@ -24,6 +27,16 @@ export default function ClientSessionDetailPage() {
   useEffect(() => {
     if (!ready) return;
     void (async () => {
+      if (usePublicApi()) {
+        const found = await fetchBooking(params.id);
+        if (!found || found.booking.clientId !== user.userId) {
+          setBooking(null);
+          return;
+        }
+        setBooking(found.booking);
+        setProfessional(found.professional);
+        return;
+      }
       const found = await db.bookings.getById(params.id);
       if (!found || (user.userId && found.clientId !== user.userId)) {
         setBooking(null);
@@ -54,7 +67,8 @@ export default function ClientSessionDetailPage() {
   const readyLink = booking.linkState === "ready";
 
   async function onCancel() {
-    await db.bookings.cancel(booking!.id, "client");
+    if (usePublicApi()) await cancelApiBooking(booking!.id);
+    else await db.bookings.cancel(booking!.id, "client");
     router.push(`${routes.clientSessions}?tab=cancelled`);
   }
 
@@ -88,7 +102,7 @@ export default function ClientSessionDetailPage() {
         </div>
         <div>
           <dt className="text-sm text-ink-3">{t("session.datetime")}</dt>
-          <dd>{booking.dateLabel}</dd>
+          <dd>{usePublicApi() ? formatBookerLocal(booking.slotAt) : booking.dateLabel}</dd>
         </div>
         <div>
           <dt className="text-sm text-ink-3">{t("session.duration")}</dt>

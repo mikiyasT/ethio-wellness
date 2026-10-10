@@ -48,7 +48,7 @@ Railway: set the same env vars as secrets and use `npx prisma migrate deploy` as
 
 ### Public directory (Phase B)
 
-Copy `apps/web/.env.example` to `apps/web/.env.local` and leave `NEXT_PUBLIC_USE_API=true` and `NEXT_PUBLIC_API_URL=http://localhost:4000`. That file is the local dev switch: the professionals list, profile, and open hours load from Postgres. Pending professionals are omitted (a direct profile URL is a 404). Slot chips are formatted in the browser’s timezone; the API still returns UTC `startsAt` / `endsAt`. Booking and sign-in still use the browser store until later phases.
+Copy `apps/web/.env.example` to `apps/web/.env.local` and leave `NEXT_PUBLIC_USE_API=true` and `NEXT_PUBLIC_API_URL=http://localhost:4000`. That file is the local dev switch: the professionals list, profile, open hours, and booking flow load from Postgres. Pending professionals are omitted (a direct profile URL is a 404). Slot chips for a booker are formatted in the browser’s timezone; the provider calendar stays on East Africa Time. The API still returns UTC `startsAt` / `endsAt`.
 
 ```bash
 curl -s http://localhost:4000/categories
@@ -75,7 +75,21 @@ Forgot-password does not send email yet. Outside production, the API log prints 
 
 ### Provider hours and profile (Phase D)
 
-A signed-in professional loads and saves their own rows only. `GET` and `PUT /availability/me` use East Africa Time hour picks (`date` + `time` such as `10:00 AM`). The API stores UTC `startsAt` / `endsAt`. Booked and held hours are left in place. `GET` and `PATCH /professionals/me` read and update the profile, specialties, and fee. Pending professionals can save before they are approved; those hours show on the public profile only after approval.
+A signed-in professional loads and saves their own rows only. `GET` and `PUT /availability/me` use East Africa Time hour picks (`date` + `time` such as `10:00 AM`). The API stores UTC `startsAt` / `endsAt`. Booked and held hours are left in place. `GET` and `PATCH /professionals/me` read and update the profile and specialties. `feeCents` stays on the record as the platform session price (pilot default $25). There is no fee control for professionals.
+
+### Paid booking (Phase E)
+
+A guest or signed-in client holds an open hour for 10 minutes (`POST /bookings/holds`), adds an email (`PATCH /bookings/holds/:id`), then `POST /bookings/holds/:id/checkout` returns a Stripe Checkout URL. The amount is that professional’s `feeCents` in USD test mode. Only the webhook (`POST /stripe/webhook`, `checkout.session.completed`) confirms the booking. There is no pay-without-Stripe endpoint.
+
+On confirm the API stores `sessionCode`, `manageTokenHash`, and `joinTokenHash`. The raw tokens are not stored. Join is `GET /bookings/join?code=&email=` and does not return a video-room URL. A hold that expires is cancelled and the hour opens again. A Checkout that finishes after that does not take the hour back. Cancelling an upcoming booking sets a status other than `upcoming`, which releases the one-booking-per-slot rule, and the hour opens again.
+
+Local webhook forwarding:
+
+```bash
+stripe listen --events checkout.session.completed --forward-to localhost:4000/stripe/webhook
+```
+
+Put the CLI’s signing secret in `STRIPE_WEBHOOK_SECRET`. Use card `4242 4242 4242 4242` in Stripe test mode. Success returns to `/client/booking-confirmation`, which waits until the webhook marks the booking upcoming.
 
 ## Spec rules followed
 
@@ -83,7 +97,7 @@ A signed-in professional loads and saves their own rows only. `GET` and `PUT /av
 - Auth gate appears only at book / pay / account
 - Copy comes from `docs/ethio-wellness-ui-spec/content/copy.md`
 - API request/response contracts are **not** in the UI spec, so backend modules return `501 unspecified_contract` until a product API spec exists
-- With `NEXT_PUBLIC_USE_API=true`, the public directory reads Postgres. Other screens still use the browser store
+- With `NEXT_PUBLIC_USE_API=true`, the public directory, provider hours, and paid booking flow use Postgres and Stripe test mode. The browser store remains only when that flag is off
 
 ## Docs
 

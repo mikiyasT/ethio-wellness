@@ -1,5 +1,6 @@
 import type { Professional } from "@prisma/client";
 import { categories, languageIds, type CategoryId, type LanguageId } from "../catalog.js";
+import { releaseExpiredHolds } from "../../lib/hold-sweeper.js";
 import { prisma } from "../../lib/prisma.js";
 
 const allowedLanguages = new Set<string>(languageIds);
@@ -114,6 +115,7 @@ export async function updateMyProfessional(
 }
 
 export async function listOpenAvailability(professionalId: string) {
+  await releaseExpiredHolds();
   const slots = await prisma.slot.findMany({
     where: {
       professionalId,

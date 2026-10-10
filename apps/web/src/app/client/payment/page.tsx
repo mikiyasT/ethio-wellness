@@ -3,10 +3,12 @@
 import { routes } from "@ethio-wellness/shared";
 import { Alert } from "@/components/ui/alert";
 import { resolveBookingContext } from "@/lib/booking";
+import { fetchBooking, startCheckout } from "@/lib/bookings-api";
 import { db, formatFee, type DbBooking, type DbProfessional } from "@/lib/db";
 import { formatBookerLocal } from "@/lib/guest-booking";
 import { useLocale } from "@/lib/locale";
 import { trackPixel } from "@/lib/pixel";
+import { fetchProfessionalBySlug, usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
@@ -30,6 +32,27 @@ function ClientPaymentInner() {
 
   useEffect(() => {
     void (async () => {
+      if (usePublicApi()) {
+        const proSlug = search.get("pro");
+        const holdId = search.get("hold");
+        const pro = proSlug ? await fetchProfessionalBySlug(proSlug) : null;
+        if (pro) {
+          setProfessional(pro);
+          setFee(formatFee(pro.fee));
+        }
+        if (holdId) {
+          const found = await fetchBooking(holdId);
+          if (found?.booking.status === "held") {
+            setHold(found.booking);
+            setProfessional(found.professional);
+            setDateLabel(formatBookerLocal(found.booking.slotAt));
+            setFee(formatFee(found.booking.fee));
+            return;
+          }
+          setError("Your hold expired. Please pick the slot again.");
+        }
+        return;
+      }
       await db.bookings.releaseExpiredHolds();
       const ctx = await resolveBookingContext(search.get("pro"), search.get("slot"));
       setProfessional(ctx.professional);
@@ -65,7 +88,18 @@ function ClientPaymentInner() {
     setState("processing");
     setError("");
 
-    // Simulated Stripe Checkout test payment (4242… succeeds).
+    if (usePublicApi()) {
+      try {
+        const checkout = await startCheckout(hold.id);
+        window.location.assign(checkout.url);
+      } catch (err) {
+        setState("error");
+        setError(err instanceof Error ? err.message : "Payment could not be completed.");
+      }
+      return;
+    }
+
+    // Local pilot only: simulated payment when the API flag is off.
     window.setTimeout(() => {
       void (async () => {
         try {

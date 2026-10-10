@@ -4,7 +4,10 @@ import { categoryById, routes } from "@ethio-wellness/shared";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
+import { fetchMyBookings } from "@/lib/bookings-api";
 import { db, type DbBooking, type DbProfessional } from "@/lib/db";
+import { formatBookerLocal } from "@/lib/guest-booking";
+import { usePublicApi } from "@/lib/public-api";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import { useSearchParams } from "next/navigation";
@@ -24,6 +27,14 @@ function ClientSessionsInner() {
   useEffect(() => {
     if (!ready || !user.userId) return;
     void (async () => {
+      if (usePublicApi()) {
+        const rows = await fetchMyBookings();
+        setBookings(rows.map((row) => row.booking));
+        const map: Record<string, DbProfessional> = {};
+        for (const row of rows) map[row.professional.id] = row.professional;
+        setPros(map);
+        return;
+      }
       const list = await db.bookings.listForClient(user.userId!);
       setBookings(list);
       const map: Record<string, DbProfessional> = {};
@@ -74,7 +85,7 @@ function ClientSessionsInner() {
               <article key={booking.id} className="rounded-2xl border border-border bg-surface p-5">
                 <p className="font-semibold">{professional?.name}</p>
                 <p className="text-sm text-ink-2">{categoryById(booking.specialty)?.name}</p>
-                <p className="mt-1 text-sm">{booking.dateLabel}</p>
+                <p className="mt-1 text-sm">{usePublicApi() ? formatBookerLocal(booking.slotAt) : booking.dateLabel}</p>
                 <div className="mt-3">
                   <ButtonLink href={routes.clientSessionDetail(booking.id)} variant="secondary">
                     {booking.linkState === "ready" ? t("sessions.join") : t("sessions.details")}

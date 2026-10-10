@@ -4,10 +4,10 @@ import { routes } from "@ethio-wellness/shared";
 import { BrandMark } from "@/components/brand-mark";
 import { Alert } from "@/components/ui/alert";
 import { TextField } from "@/components/ui/field";
-import { AuthRequestError, DEMO_PASSWORD, loginAccount } from "@/lib/auth-api";
+import { AuthRequestError, loginAccount } from "@/lib/auth-api";
 import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
-import { DEMO_CLIENT, DEMO_PROVIDER, mockLoginByIdentifier } from "@/lib/mock-auth";
+import { mockLoginByIdentifier } from "@/lib/mock-auth";
 import { isAwaitingApproval } from "@/lib/pro-approval";
 import { usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
@@ -107,19 +107,6 @@ function LoginInner() {
     }
   }
 
-  async function quickLogin(email: string) {
-    setIdentifier(email);
-    setPassword(DEMO_PASSWORD);
-    setErrors({});
-    try {
-      await completeLogin(email, DEMO_PASSWORD);
-    } catch (err) {
-      setErrors({
-        form: err instanceof Error ? err.message : "Could not sign in. Please try again.",
-      });
-    }
-  }
-
   const next = search.get("next");
   const registerHref = next ? `${routes.register}?next=${encodeURIComponent(next)}` : routes.register;
 
@@ -137,36 +124,13 @@ function LoginInner() {
           </div>
         ) : null}
 
-        <div className="mt-6 space-y-2 rounded-2xl border border-border bg-surface-warm p-4">
-          <p className="text-sm font-medium text-ink">Seeded demo accounts</p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => void quickLogin(DEMO_CLIENT.email)}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-border bg-surface px-4 text-sm font-semibold text-ink hover:bg-primary-tint"
-            >
-              {DEMO_CLIENT.name}
-            </button>
-            <button
-              type="button"
-              onClick={() => void quickLogin(DEMO_PROVIDER.email)}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-border bg-surface px-4 text-sm font-semibold text-ink hover:bg-primary-tint"
-            >
-              {DEMO_PROVIDER.name}
-            </button>
-          </div>
-          <p className="text-xs text-ink-3">
-            Password for every seeded account: <span className="font-medium">{DEMO_PASSWORD}</span>
-          </p>
-        </div>
-
         <form className="mt-6 space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextField
             label={usePublicApi() ? t("login.email") : "Username or email"}
             name="email"
             type={usePublicApi() ? "email" : "text"}
             autoComplete="username"
-            placeholder={DEMO_CLIENT.email}
+            placeholder="you@example.com"
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             error={errors.email}

@@ -21,10 +21,10 @@ if (!parsed.success) {
   throw new Error("Invalid API environment");
 }
 
-if (!parsed.data.STRIPE_SECRET_KEY || !parsed.data.STRIPE_WEBHOOK_SECRET) {
-  console.warn(
-    "Stripe keys are not set. Checkout and webhooks are required in Phase E; health and seed do not need them.",
-  );
+if (!parsed.data.STRIPE_SECRET_KEY) {
+  console.warn("STRIPE_SECRET_KEY is not set. Checkout cannot start.");
+} else if (!parsed.data.STRIPE_WEBHOOK_SECRET) {
+  console.warn("STRIPE_WEBHOOK_SECRET is not set. Checkout can start, but payment will not confirm until the webhook secret is set.");
 }
 
 const corsOrigins = parsed.data.CORS_ORIGIN.split(",")
