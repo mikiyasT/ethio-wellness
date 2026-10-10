@@ -1,0 +1,15 @@
+# API service. Set the Railway root directory to the repository root.
+# Secrets: DATABASE_URL, DIRECT_URL, SESSION_SECRET, ADMIN_TOKEN, CORS_ORIGIN,
+# COOKIE_SECURE=true, PUBLIC_WEB_URL, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET.
+# Web and API must both be HTTPS when COOKIE_SECURE is true.
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build -w @ethio-wellness/api"
+
+[deploy]
+preDeployCommand = "npm run db:migrate -w @ethio-wellness/api"
+startCommand = "npm run start -w @ethio-wellness/api"
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"

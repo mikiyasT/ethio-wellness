@@ -6,6 +6,10 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./lead": {
+      "types": "./lead.d.ts",
+      "default": "./lead.js"
+    }
   }
 }

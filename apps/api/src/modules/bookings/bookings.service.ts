@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import type Stripe from "stripe";
 import { env } from "../../config/env.js";
+import { eatDateIso, minOpenDate } from "../../lib/eat.js";
 import { holdExpiry, releaseExpiredHolds } from "../../lib/hold-sweeper.js";
 import { prisma } from "../../lib/prisma.js";
 import { hashToken, newOpaqueToken } from "../../lib/session-cookie.js";
@@ -123,6 +124,7 @@ export async function createHold(slotId: string, clientId?: string) {
       include: { professional: { select: { id: true, status: true, feeCents: true, currency: true, specialties: true } } },
     });
     if (!slot || slot.professional.status !== "approved") throw new BookingError(404, "not_found");
+    if (eatDateIso(slot.startsAt) < minOpenDate()) throw new BookingError(409, "slot_too_soon");
     if (slot.startsAt.getTime() <= Date.now()) throw new BookingError(409, "slot_unavailable");
 
     const claimed = await tx.slot.updateMany({

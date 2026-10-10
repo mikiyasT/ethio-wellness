@@ -1,10 +1,12 @@
 "use client";
 
 import { routes, type SlotStatus } from "@ethio-wellness/shared";
+import { MIN_LEAD_DAYS } from "@ethio-wellness/shared/lead";
 import { SlotChip } from "@/components/domain/slot-chip";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
 import {
+  addDays,
   calendarCells,
   eatDateAndHour,
   eatTodayIso,
@@ -12,19 +14,14 @@ import {
   formatMonthTitle,
   hasOpenSlots,
   hoursForDate,
-  loadSlotsForProfessional,
   parseIsoDate,
   serializeSlots,
-  toIsoDate,
   upsertLocalSlot,
 } from "@/lib/availability-editor";
 import type { DbSlot } from "@/lib/db";
-import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { fetchProfessionalBookings } from "@/lib/bookings-api";
-import { fetchMyAvailability, saveMyAvailability, type MySlot } from "@/lib/pro-api";
-import { defaultProfessionalStatus } from "@/lib/pro-approval";
-import { usePublicApi } from "@/lib/public-api";
+import { fetchMyAvailability, ProRequestError, saveMyAvailability, type MySlot } from "@/lib/pro-api";
 import { useSession } from "@/lib/session";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,28 +36,32 @@ function AvailabilityInner() {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
-  const { setSession, user, ready, refresh } = useSession();
+  const { user, ready } = useSession();
   const fromOnboarding = search.get("from") === "onboarding";
 
-  const todayIso = useMemo(() => (usePublicApi() ? eatTodayIso() : toIsoDate(new Date())), []);
+  const todayIso = useMemo(() => eatTodayIso(), []);
+  const minDateIso = useMemo(() => addDays(todayIso, MIN_LEAD_DAYS), [todayIso]);
+  const leadLabel = useMemo(
+    () => parseIsoDate(minDateIso).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    [minDateIso],
+  );
   const [proId, setProId] = useState<string | null>(null);
   const [slots, setSlots] = useState<DbSlot[]>([]);
   const [baselineSlots, setBaselineSlots] = useState<DbSlot[]>([]);
   const [bookedMetaBySlotId, setBookedMetaBySlotId] = useState<Record<string, BookedSlotMeta>>({});
-  const [selectedDate, setSelectedDate] = useState(todayIso);
+  const [selectedDate, setSelectedDate] = useState(minDateIso);
   const [viewMonth, setViewMonth] = useState(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
+    const start = parseIsoDate(minDateIso);
+    return { year: start.getFullYear(), month: start.getMonth() };
   });
   const [savedMsg, setSavedMsg] = useState(false);
   const [info, setInfo] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [confirmCloseDay, setConfirmCloseDay] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<DbSlot | null>(null);
 
-  async function loadBookedMeta(professionalId: string, proSlots: DbSlot[]) {
-    const bookings = usePublicApi()
-      ? await fetchProfessionalBookings()
-      : await db.bookings.listForProfessional(professionalId);
+  async function loadBookedMeta(_professionalId: string, proSlots: DbSlot[]) {
+    const bookings = await fetchProfessionalBookings();
     const meta: Record<string, BookedSlotMeta> = {};
     for (const booking of bookings) {
       if (booking.status === "cancelled") continue;
@@ -75,9 +76,6 @@ function AvailabilityInner() {
       let firstName = "Client";
       if (booking.guestFirstName) {
         firstName = booking.guestFirstName;
-      } else if (booking.clientId) {
-        const client = await db.users.getById(booking.clientId);
-        firstName = (client?.name ?? "Client").trim().split(/\s+/)[0] || "Client";
       }
       meta[slot.id] = {
         clientFirstName: firstName,
@@ -98,36 +96,19 @@ function AvailabilityInner() {
   useEffect(() => {
     if (!ready || !user.userId) return;
     void (async () => {
-      if (usePublicApi()) {
-        if (!user.professionalId) return;
-        setProId(user.professionalId);
-        const loaded = (await fetchMyAvailability()).map((slot) => slotInEat(slot, user.professionalId!));
-        setSlots(loaded);
-        setBaselineSlots(loaded);
-        await loadBookedMeta(user.professionalId, loaded);
-        const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso;
-        const start = firstOpen ?? todayIso;
-        setSelectedDate(start);
-        const d = parseIsoDate(start);
-        setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
-        return;
-      }
-      const pro =
-        (user.professionalId ? await db.professionals.getById(user.professionalId) : undefined) ??
-        (await db.professionals.getByUserId(user.userId!));
-      if (!pro) return;
-      setProId(pro.id);
-      const loaded = await loadSlotsForProfessional(pro.id);
+      if (!user.professionalId) return;
+      setProId(user.professionalId);
+      const loaded = (await fetchMyAvailability()).map((slot) => slotInEat(slot, user.professionalId!));
       setSlots(loaded);
       setBaselineSlots(loaded);
-      await loadBookedMeta(pro.id, loaded);
-      const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= todayIso)?.dateIso;
-      const start = firstOpen ?? todayIso;
+      await loadBookedMeta(user.professionalId, loaded);
+      const firstOpen = loaded.find((slot) => slot.status === "open" && slot.dateIso >= minDateIso)?.dateIso;
+      const start = firstOpen ?? minDateIso;
       setSelectedDate(start);
       const d = parseIsoDate(start);
       setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
     })();
-  }, [ready, user.userId, user.professionalId, todayIso]);
+  }, [ready, user.userId, user.professionalId, todayIso, minDateIso]);
 
   const daySlots = useMemo(
     () => (proId ? hoursForDate(selectedDate, slots, proId) : []),
@@ -140,7 +121,7 @@ function AvailabilityInner() {
   const dirty = serializeSlots(slots) !== serializeSlots(baselineSlots);
 
   function selectDate(iso: string) {
-    if (iso < todayIso) return;
+    if (iso < minDateIso) return;
     setSelectedDate(iso);
     setSavedMsg(false);
     setInfo("");
@@ -198,10 +179,11 @@ function AvailabilityInner() {
 
   async function performSave() {
     if (!proId || !user.userId) return;
-    if (usePublicApi()) {
-      const hours = slots
-        .filter((slot) => slot.status === "open")
-        .map((slot) => ({ date: slot.dateIso, time: slot.timeLabel }));
+    const hours = slots
+      .filter((slot) => slot.status === "open" && slot.dateIso >= minDateIso)
+      .map((slot) => ({ date: slot.dateIso, time: slot.timeLabel }));
+    setSaveError("");
+    try {
       const loaded = (await saveMyAvailability(hours)).map((slot) => slotInEat(slot, proId));
       setSlots(loaded);
       setBaselineSlots(loaded);
@@ -210,40 +192,18 @@ function AvailabilityInner() {
       setInfo("");
       setConfirmCloseDay(false);
       if (fromOnboarding) router.push(routes.professionalPending);
-      return;
-    }
-    const compact = slots.filter((slot) => slot.status === "open" || slot.status === "booked");
-    const existing = await loadSlotsForProfessional(proId);
-    const booked = existing.filter((slot) => slot.status === "booked");
-    const bookedKeys = new Set(booked.map((slot) => `${slot.dateIso}|${slot.timeLabel}`));
-    const next = [
-      ...booked,
-      ...compact.filter(
-        (slot) => slot.status === "open" && !bookedKeys.has(`${slot.dateIso}|${slot.timeLabel}`),
-      ),
-    ];
-    await replaceProfessionalSlots(proId, next);
-
-    const reloaded = await loadSlotsForProfessional(proId);
-    setSlots(reloaded);
-    setBaselineSlots(reloaded);
-    await loadBookedMeta(proId, reloaded);
-    setSavedMsg(true);
-    setInfo("");
-    setConfirmCloseDay(false);
-
-    if (fromOnboarding) {
-      const status = defaultProfessionalStatus();
-      await db.professionals.update(proId, { status });
-      setSession({
-        ...user,
-        role: "professional",
-        professionalId: proId,
-        professionalStatus: status,
-      });
-      await refresh();
-      // TEMP: auto-approve skips /professional/pending
-      router.push(status === "approved" ? routes.professionalHome : routes.professionalPending);
+    } catch (err) {
+      setSavedMsg(false);
+      setConfirmCloseDay(false);
+      if (err instanceof ProRequestError && err.code === "availability_too_soon") {
+        const when = parseIsoDate(err.minDate ?? minDateIso).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+        setSaveError(t("proAvail.lead").replace("{date}", when));
+        return;
+      }
+      setSaveError(err instanceof Error ? err.message : "Could not save your hours.");
     }
   }
 
@@ -279,6 +239,7 @@ function AvailabilityInner() {
       ) : null}
       <h1 className="mt-2 text-3xl font-bold text-ink">{t("proAvail.title")}</h1>
       <p className="mt-2 text-ink-2">{t("proAvail.sub")}</p>
+      <p className="mt-2 text-sm text-ink-2">{t("proAvail.lead").replace("{date}", leadLabel)}</p>
 
       <section className="mt-6 rounded-2xl border border-border bg-surface p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2">
@@ -312,7 +273,7 @@ function AvailabilityInner() {
         <div className="mt-1 grid grid-cols-7 gap-1">
           {cells.map((iso, index) => {
             if (!iso) return <div key={`pad-${index}`} />;
-            const isPast = iso < todayIso;
+            const isTooSoon = iso < minDateIso;
             const isSelected = iso === selectedDate;
             const isToday = iso === todayIso;
             const dayHasOpen = hasOpenSlots(hoursForDate(iso, slots, proId));
@@ -320,12 +281,12 @@ function AvailabilityInner() {
               <button
                 key={iso}
                 type="button"
-                disabled={isPast}
+                disabled={isTooSoon}
                 onClick={() => selectDate(iso)}
                 className={[
                   "relative flex min-h-11 flex-col items-center justify-center rounded-xl text-sm",
-                  isPast && "cursor-not-allowed text-ink-3 opacity-40",
-                  !isPast && !isSelected && "text-ink hover:bg-avail-tint",
+                  isTooSoon && "cursor-not-allowed text-ink-3 opacity-40",
+                  !isTooSoon && !isSelected && "text-ink hover:bg-avail-tint",
                   isSelected && "bg-avail font-semibold text-white",
                   !isSelected && isToday && "ring-1 ring-avail",
                 ]
@@ -426,6 +387,11 @@ function AvailabilityInner() {
           <Alert tone={confirmCloseDay ? "warning" : "info"}>{info}</Alert>
         </div>
       ) : null}
+      {saveError ? (
+        <div className="mt-4">
+          <Alert tone="error">{saveError}</Alert>
+        </div>
+      ) : null}
       {savedMsg && !fromOnboarding ? (
         <div className="mt-4">
           <Alert tone="success">{t("proAvail.saved")}</Alert>
@@ -500,10 +466,6 @@ function slotInEat(slot: MySlot, professionalId: string): DbSlot {
     timeLabel,
     status,
   };
-}
-
-async function replaceProfessionalSlots(professionalId: string, next: DbSlot[]) {
-  await db.slots.replaceForProfessional(professionalId, next);
 }
 
 export default function ProfessionalAvailabilityPage() {

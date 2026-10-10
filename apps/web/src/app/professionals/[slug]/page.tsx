@@ -164,7 +164,13 @@ export default function ProfessionalDetailPage() {
       router.push(`${bookPath(professional.slug, selectedSlot.id)}&hold=${hold.id}`);
     } catch (err) {
       setBusy(false);
-      setError(err instanceof Error ? err.message : "Could not hold this slot. Try another time.");
+      setError(
+        err instanceof Error && err.message === "slot_too_soon"
+          ? t("booking.slotTooSoon")
+          : err instanceof Error
+            ? err.message
+            : "Could not hold this slot. Try another time.",
+      );
       await reloadSlots();
     }
   }

@@ -24,6 +24,15 @@ export type MySlot = {
   status: "open" | "booked" | "held" | "closed";
 };
 
+export class ProRequestError extends Error {
+  constructor(
+    public code: string,
+    public minDate?: string,
+  ) {
+    super(code);
+  }
+}
+
 async function proRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBase()}${path}`, {
     ...init,
@@ -34,8 +43,8 @@ async function proRequest<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error || `API ${response.status}`);
+    const body = (await response.json().catch(() => ({}))) as { error?: string; minDate?: string };
+    throw new ProRequestError(body.error || `API ${response.status}`, body.minDate);
   }
   return response.json() as Promise<T>;
 }

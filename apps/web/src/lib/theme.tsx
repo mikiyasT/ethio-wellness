@@ -1,6 +1,6 @@
 "use client";
 
-import { db, type ThemePref } from "@/lib/db";
+import type { ThemePref } from "@/lib/db";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type Theme = ThemePref;
@@ -25,14 +25,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     applyTheme("dark");
     setThemeState("dark");
-    void db.prefs.setTheme("dark");
   }, []);
 
   const setTheme = useCallback((_next: Theme) => {
     // Night-only: ignore requests for light mode.
     setThemeState("dark");
     applyTheme("dark");
-    void db.prefs.setTheme("dark");
   }, []);
 
   const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme }), [theme, setTheme]);

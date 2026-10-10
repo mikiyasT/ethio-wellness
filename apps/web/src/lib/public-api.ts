@@ -19,9 +19,9 @@ export function apiBase() {
   return `${protocol}//${host}:${port}`;
 }
 
-/** Directory, profile, hours, and booking use the API when this is true. */
+/** Directory, profile, hours, and booking always use the API. The pilot store is not a fallback. */
 export function usePublicApi() {
-  return process.env.NEXT_PUBLIC_USE_API === "true";
+  return true;
 }
 
 type ApiProfessional = {

@@ -5,11 +5,8 @@ import { BrandMark } from "@/components/brand-mark";
 import { Alert } from "@/components/ui/alert";
 import { TextField } from "@/components/ui/field";
 import { AuthRequestError, loginAccount } from "@/lib/auth-api";
-import { db } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
-import { mockLoginByIdentifier } from "@/lib/mock-auth";
 import { isAwaitingApproval } from "@/lib/pro-approval";
-import { usePublicApi } from "@/lib/public-api";
 import { useSession } from "@/lib/session";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -35,7 +32,7 @@ function LoginInner() {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
-  const { setSessionFromUser, refresh, role, ready } = useSession();
+  const { refresh, role, ready } = useSession();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
@@ -46,44 +43,24 @@ function LoginInner() {
   }, [ready, role, router]);
 
   async function completeLogin(rawId: string, rawPassword: string) {
-    if (usePublicApi()) {
-      const email = rawId.trim().toLowerCase();
-      if (!email.includes("@")) throw new Error("Enter the email address for this account.");
-      if (!rawPassword) throw new Error("Enter your password.");
-      let user;
-      try {
-        const result = await loginAccount(email, rawPassword);
-        user = result.user;
-      } catch (error) {
-        if (error instanceof AuthRequestError && error.code === "invalid_credentials") {
-          throw new Error("That email and password do not match.");
-        }
-        throw error;
+    const email = rawId.trim().toLowerCase();
+    if (!email.includes("@")) throw new Error("Enter the email address for this account.");
+    if (!rawPassword) throw new Error("Enter your password.");
+    let user;
+    try {
+      const result = await loginAccount(email, rawPassword);
+      user = result.user;
+    } catch (error) {
+      if (error instanceof AuthRequestError && error.code === "invalid_credentials") {
+        throw new Error("That email and password do not match.");
       }
-      await refresh();
-      if (user.role === "professional") {
-        router.push(isAwaitingApproval(user.professionalStatus) ? routes.professionalPending : routes.professionalHome);
-        return;
-      }
-      router.push(postLoginDestination("client", search.get("next")));
+      throw error;
+    }
+    await refresh();
+    if (user.role === "professional") {
+      router.push(isAwaitingApproval(user.professionalStatus) ? routes.professionalPending : routes.professionalHome);
       return;
     }
-
-    const dbUser = await mockLoginByIdentifier(rawId);
-    await setSessionFromUser(dbUser);
-
-    if (dbUser.role === "professional") {
-      const pro = dbUser.professionalId
-        ? await db.professionals.getById(dbUser.professionalId)
-        : await db.professionals.getByUserId(dbUser.id);
-      if (isAwaitingApproval(pro?.status)) {
-        router.push(routes.professionalPending);
-        return;
-      }
-      router.push(routes.professionalHome);
-      return;
-    }
-
     router.push(postLoginDestination("client", search.get("next")));
   }
 
@@ -93,8 +70,8 @@ function LoginInner() {
     const emailOrName = String(data.get("email") ?? identifier).trim();
     const enteredPassword = String(data.get("password") ?? password);
     const nextErrors: typeof errors = {};
-    if (!emailOrName) nextErrors.email = usePublicApi() ? "Enter your email" : "Enter your username or email";
-    if (usePublicApi() && !enteredPassword) nextErrors.password = "Enter your password";
+    if (!emailOrName) nextErrors.email = "Enter your email";
+    if (!enteredPassword) nextErrors.password = "Enter your password";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -126,9 +103,9 @@ function LoginInner() {
 
         <form className="mt-6 space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextField
-            label={usePublicApi() ? t("login.email") : "Username or email"}
+            label={t("login.email")}
             name="email"
-            type={usePublicApi() ? "email" : "text"}
+            type="email"
             autoComplete="username"
             placeholder="you@example.com"
             value={identifier}

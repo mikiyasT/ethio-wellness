@@ -34,6 +34,9 @@ function isAllowedOrigin(origin: string | undefined) {
 
 export function createApp() {
   const app = express();
+  if (env.cookieSecure) {
+    app.set("trust proxy", 1);
+  }
 
   app.use(
     cors({

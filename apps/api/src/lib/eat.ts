@@ -1,6 +1,11 @@
+import { MIN_LEAD_DAYS } from "@ethio-wellness/shared/lead";
+
 /** East Africa Time is UTC+3 year-round. Hour labels match the provider grid. */
 
 export const EAT = "Africa/Addis_Ababa";
+const EAT_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+export { MIN_LEAD_DAYS };
 
 export const EAT_HOUR_LABELS = [
   "12:00 AM",
@@ -50,4 +55,27 @@ export function startsAtFromEat(dateIso: string, timeLabel: string): Date | null
   if (ampm === "PM" && hours < 12) hours += 12;
   if (ampm === "AM" && hours === 12) hours = 0;
   return new Date(Date.UTC(year!, month! - 1, day!, hours - 3, minutes, 0));
+}
+
+/** Calendar date YYYY-MM-DD in East Africa Time. */
+export function eatDateIso(instant: Date): string {
+  const shifted = new Date(instant.getTime() + EAT_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function addCalendarDays(dateIso: string, days: number): string {
+  const [year, month, day] = dateIso.split("-").map(Number);
+  const next = new Date(Date.UTC(year!, month! - 1, day! + days));
+  const y = next.getUTCFullYear();
+  const m = String(next.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(next.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Earliest EAT calendar date a provider may open. Oct 10 → Oct 12. */
+export function minOpenDate(now = new Date()): string {
+  return addCalendarDays(eatDateIso(now), MIN_LEAD_DAYS);
 }

@@ -5,7 +5,7 @@
 
 ---
 
-## Phase 1 — Guest booking ships (mostly done — pilot)
+## Phase 1 — Guest booking ships (**done** for the pilot API)
 
 | Item | Status |
 |------|--------|
@@ -13,15 +13,15 @@
 | Allow guests on `/client/book`, `/payment`, `/booking-confirmation` (app-shell) | **Done** |
 | Guest form (first name, last optional, email, phone optional, private note) | **Done** |
 | 10-minute slot hold on slot select (`held` + expiry release) | **Done** |
-| Stripe Checkout test mode | **Partial** — simulated secure pay at pro fee; real Stripe Checkout Session when keys wired |
-| Fee = professional fee (not hardcoded $25) | **Done** (hold/confirm use `professional.fee`) |
+| Stripe Checkout test mode | **Done** — Checkout Session plus `checkout.session.completed` webhook. No confirm-without-payment route |
+| Fee = platform session price (`feeCents`, pilot default $25) | **Done** |
 | Confirmation: session card, AYZ code, .ics, email line, soft account CTA | **Done** |
 | Provider bookings: Guest badge + name | **Done** |
 | Booked slot card: `Booked · {firstName}` + payout | **Done** (prior + guest first name) |
 | Signed-in path (skip guest fields, hold with clientId) | **Done** |
 | Rate limit: max 3 pending per email | **Done** |
 | Meta Pixel: PageView, InitiateCheckout, Purchase only | **Done** (no-op until `fbq` loaded) |
-| Timezone: UTC `slotAt`, booker-local display, EAT for provider | **Done** |
+| Timezone: UTC `startsAt` / `endsAt`, booker-local display, EAT for provider | **Done** |
 | Session code `AYZ-XXXX` (Crockford) | **Done** |
 | Tokens generated on booking (manage/join hashes) for Phase 2 | **Done** |
 | Soft fork before book: guest (primary) vs create account | **Done** |
@@ -38,8 +38,8 @@
 
 ### Phase 1 leftover
 
-- [ ] Wire real Stripe Checkout (test keys → Checkout Session redirect)
-- [ ] Optional: IP rate limit (browser pilot is email-only)
+- [x] Wire real Stripe Checkout (test keys → Checkout Session redirect)
+- [x] Light IP rate limit on hold, checkout, and join (email cap of 3 holds remains)
 - [ ] Load Meta Pixel script via env (`NEXT_PUBLIC_META_PIXEL_ID`) when ready
 
 ---
@@ -59,9 +59,9 @@ Deferred until founder Meta Business / API number / templates ready.
 
 ---
 
-## Phase 3 — Hardening (**not started**)
+## Phase 3 — Hardening (**auth and Postgres done**; the rest still open)
 
-- [ ] Real auth + Postgres (replace localStorage)
+- [x] Real auth + Postgres (cookie sessions, Neon). The browser no longer stores the domain database
 - [ ] CAPTCHA / fraud / VOIP blocking if needed
 - [ ] No-show marking + policy
 - [ ] Funnel analytics (guest vs account)
@@ -77,4 +77,4 @@ Deferred until founder Meta Business / API number / templates ready.
 
 ---
 
-*Last updated: Phase 1 pilot implementation landed in app code.*
+*Last updated: Phase F. Stripe Checkout and webhook, cookie auth, and Postgres are in place. Phase 2 (WhatsApp, manage tokens, Daily.co) is still open. Schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`.*

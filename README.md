@@ -4,9 +4,9 @@ Monorepo for the **Ayzon** web app ([ayzoncare.com](https://ayzoncare.com)). The
 
 ## Apps
 
-- `apps/web` — Next.js frontend (29 spec screens, design tokens, sample data)
-- `apps/api` — Express API (Prisma + Neon Postgres). Public directory reads are live; other domain routes still return 501.
-- `packages/shared` — types, sample data, routes, and copy from the spec
+- `apps/web` — Next.js frontend (29 spec screens, design tokens). Directory, booking, and accounts read and write the API
+- `apps/api` — Express API (Prisma + Neon Postgres, Stripe Checkout in test mode)
+- `packages/shared` — types, sample data, routes, and copy. Slot and booking instants use UTC `startsAt` / `endsAt`
 
 ## Run locally
 
@@ -44,11 +44,13 @@ npm run dev:api
 
 The seed deletes existing rows before inserting. It refuses to run when `NODE_ENV=production` unless `ALLOW_DESTRUCTIVE_SEED=true`. Seeded users share the password `AyzonDemo!2026`. Sample counselors are `approved`. `test.provider@example.com` stays `pending` until the `ADMIN_TOKEN` approve endpoint lands in a later phase. Slot times are stored as UTC instants; sample labels are interpreted as East Africa Time.
 
-Railway: set the same env vars as secrets and use `npx prisma migrate deploy` as the release command. That command also applies the raw SQL partial unique index on `bookings(slot_id) WHERE status = 'upcoming'`.
+Railway: point the service at the repository root. `railway.toml` builds the API, runs `npm run db:migrate -w @ethio-wellness/api` before each deploy, and health-checks `GET /health`. That migrate command also applies the raw SQL partial unique index on `bookings(slot_id) WHERE status = 'upcoming'`.
+
+Set these as Railway secrets (do not commit them): `DATABASE_URL` (Neon pooled), `DIRECT_URL` (Neon direct), `SESSION_SECRET`, `ADMIN_TOKEN`, `CORS_ORIGIN` (the HTTPS web origin), `COOKIE_SECURE=true`, `PUBLIC_WEB_URL` (the HTTPS web origin), `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` from the Stripe dashboard endpoint that points at `https://<api-host>/stripe/webhook`. With `COOKIE_SECURE=true` the session cookie is `Secure` and `SameSite=None`, so both the website and the API must be HTTPS. Leave `COOKIE_SECURE=false` on this computer.
 
 ### Public directory (Phase B)
 
-Copy `apps/web/.env.example` to `apps/web/.env.local` and leave `NEXT_PUBLIC_USE_API=true` and `NEXT_PUBLIC_API_URL=http://localhost:4000`. That file is the local dev switch: the professionals list, profile, open hours, and booking flow load from Postgres. Pending professionals are omitted (a direct profile URL is a 404). Slot chips for a booker are formatted in the browser’s timezone; the provider calendar stays on East Africa Time. The API still returns UTC `startsAt` / `endsAt`.
+Copy `apps/web/.env.example` to `apps/web/.env.local` and set `NEXT_PUBLIC_API_URL=http://localhost:4000`. The professionals list, profile, open hours, and booking flow load from Postgres. Pending professionals are omitted (a direct profile URL is a 404). Slot chips for a booker are formatted in the browser’s timezone; the provider calendar stays on East Africa Time. The API stores UTC `startsAt` / `endsAt` only.
 
 ```bash
 curl -s http://localhost:4000/categories
@@ -89,15 +91,28 @@ Local webhook forwarding:
 stripe listen --events checkout.session.completed --forward-to localhost:4000/stripe/webhook
 ```
 
-Put the CLI’s signing secret in `STRIPE_WEBHOOK_SECRET`. Use card `4242 4242 4242 4242` in Stripe test mode. Success returns to `/client/booking-confirmation`, which waits until the webhook marks the booking upcoming.
+Put the CLI’s signing secret in `STRIPE_WEBHOOK_SECRET`. Use card `4242 4242 4242 4242` in Stripe test mode. Success returns to `/client/booking-confirmation`, which waits until the webhook marks the booking upcoming. Cancelling a paid booking does not refund it; pilot refunds are done in the Stripe dashboard.
+
+Hold, checkout, and join are rate limited per IP (20 holds, 10 checkouts, and 30 join lookups per 10 minutes). Those counts stay in the memory of each API process, so they are not one shared ceiling when Railway runs more than one replica.
+
+### Cutover (Phase F)
+
+The browser does not keep a domain database. Login uses the API only. Shared types `SlotInstant` and `BookingInstant` are the UTC shape. Phase 2 tables (`otp_codes`, `message_log`, `reviews`, `provider_payouts`) are not in the schema.
+
+With the API running:
+
+```bash
+npm run smoke -w @ethio-wellness/api
+```
+
+That checks health, register, login, approve, the public list, a hold, Stripe Checkout, a signed webhook, join, and the one-upcoming-booking index. It deletes the rows it creates.
 
 ## Spec rules followed
 
 - Guests can browse services and professionals without an account
 - Auth gate appears only at book / pay / account
 - Copy comes from `docs/ethio-wellness-ui-spec/content/copy.md`
-- API request/response contracts are **not** in the UI spec, so backend modules return `501 unspecified_contract` until a product API spec exists
-- With `NEXT_PUBLIC_USE_API=true`, the public directory, provider hours, and paid booking flow use Postgres and Stripe test mode. The browser store remains only when that flag is off
+- The public directory, provider hours, accounts, and paid booking flow use Postgres and Stripe test mode
 
 ## Docs
 

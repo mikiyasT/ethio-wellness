@@ -1,5 +1,5 @@
+import { eatDateIso, minOpenDate, startsAtFromEat } from "../../lib/eat.js";
 import { prisma } from "../../lib/prisma.js";
-import { startsAtFromEat } from "../../lib/eat.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -7,6 +7,7 @@ export class AvailabilityError extends Error {
   constructor(
     public status: number,
     public code: string,
+    public minDate?: string,
   ) {
     super(code);
   }
@@ -38,10 +39,14 @@ export async function replaceMyOpenHours(
   professionalId: string,
   hours: { date: string; time: string }[],
 ) {
+  const earliest = minOpenDate();
   const desired = new Map<string, { startsAt: Date; endsAt: Date }>();
   for (const hour of hours) {
     const startsAt = startsAtFromEat(hour.date, hour.time);
     if (!startsAt) throw new AvailabilityError(400, "invalid_hour");
+    if (eatDateIso(startsAt) < earliest) {
+      throw new AvailabilityError(400, "availability_too_soon", earliest);
+    }
     const key = startsAt.toISOString();
     if (!desired.has(key)) {
       desired.set(key, { startsAt, endsAt: new Date(startsAt.getTime() + HOUR_MS) });
@@ -76,6 +81,8 @@ export async function replaceMyOpenHours(
     for (const row of existing) {
       if (row.status !== "open") continue;
       if (desired.has(row.startsAt.toISOString())) continue;
+      // Hours already inside the lead window stay. A request that includes them is rejected above.
+      if (eatDateIso(row.startsAt) < earliest) continue;
       await tx.slot.delete({ where: { id: row.id } });
     }
   });
