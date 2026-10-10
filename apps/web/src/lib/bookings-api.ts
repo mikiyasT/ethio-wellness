@@ -48,7 +48,6 @@ export type ApiBooking = {
 
 const MESSAGES: Record<string, string> = {
   slot_unavailable: "Someone else is holding this slot — try another time",
-  slot_too_soon: "This hour is inside the 2-day prep window. Please pick a later time.",
   too_many_holds: "Too many open bookings for this email. Please use an existing confirmation or try later.",
   hold_expired: "Your 10-minute hold expired. Please pick the slot again.",
   email_required: "A valid email is required",

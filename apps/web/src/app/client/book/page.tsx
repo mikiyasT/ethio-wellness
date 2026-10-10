@@ -169,7 +169,13 @@ function ClientBookInner() {
       });
       router.push(`${routes.clientPayment}?${params.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not continue. Please try again.");
+      setError(
+        err instanceof Error && err.message === "slot_too_soon"
+          ? t("booking.slotTooSoon")
+          : err instanceof Error
+            ? err.message
+            : "Could not continue. Please try again.",
+      );
     }
   }
 

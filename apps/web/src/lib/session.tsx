@@ -2,8 +2,7 @@
 
 import type { UserRole } from "@ethio-wellness/shared";
 import { fetchCurrentUser, logoutAccount, type AuthUser } from "@/lib/auth-api";
-import { db, type DbUser } from "@/lib/db";
-import { usePublicApi } from "@/lib/public-api";
+import type { DbUser } from "@/lib/db";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface SessionUser {
@@ -41,43 +40,13 @@ function sessionFromAuth(user: AuthUser): SessionUser {
   };
 }
 
-async function resolveSession(userId: string | null): Promise<SessionUser> {
-  if (!userId) return guest;
-  const dbUser = await db.users.getById(userId);
-  if (!dbUser) return guest;
-  if (dbUser.role === "professional") {
-    const pro = dbUser.professionalId
-      ? await db.professionals.getById(dbUser.professionalId)
-      : await db.professionals.getByUserId(dbUser.id);
-    return {
-      userId: dbUser.id,
-      role: "professional",
-      name: dbUser.name,
-      email: dbUser.email,
-      professionalId: pro?.id ?? dbUser.professionalId,
-      professionalStatus: pro?.status ?? "pending",
-    };
-  }
-  return {
-    userId: dbUser.id,
-    role: "client",
-    name: dbUser.name,
-    email: dbUser.email,
-  };
-}
-
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser>(guest);
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (usePublicApi()) {
-      const current = await fetchCurrentUser();
-      setUser(current ? sessionFromAuth(current) : guest);
-      return;
-    }
-    const userId = await db.session.getUserId();
-    setUser(await resolveSession(userId));
+    const current = await fetchCurrentUser();
+    setUser(current ? sessionFromAuth(current) : guest);
   }, []);
 
   useEffect(() => {
@@ -88,7 +57,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const setSessionFromUser = useCallback(async (dbUser: DbUser) => {
-    setUser(await resolveSession(dbUser.id));
+    setUser({
+      userId: dbUser.id,
+      role: dbUser.role,
+      name: dbUser.name,
+      email: dbUser.email,
+      professionalId: dbUser.professionalId,
+    });
   }, []);
 
   const setSession = useCallback((next: SessionUser) => {
@@ -96,14 +71,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    if (usePublicApi()) {
-      try {
-        await logoutAccount();
-      } catch {
-        // Clearing the local view still signs the tab out if the API is unreachable.
-      }
-    } else {
-      await db.session.clear();
+    try {
+      await logoutAccount();
+    } catch {
+      // Clearing the local view still signs the tab out if the API is unreachable.
     }
     setUser(guest);
   }, []);

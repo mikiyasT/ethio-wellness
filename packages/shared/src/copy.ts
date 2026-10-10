@@ -332,6 +332,8 @@ export const en = {
   "proSpecs.save": "Save changes",
   "proAvail.title": "Your availability",
   "proAvail.sub": "Pick a date, then tap 1-hour slots to open them for booking.",
+  "proAvail.lead": "Slots open from {date} — always at least 2 days ahead, so you have prep time",
+  "booking.slotTooSoon": "This hour is inside the 2-day prep window. Please pick a later time.",
   "proAvail.available": "Available",
   "proAvail.booked": "Booked",
   "proAvail.note": "Tap Save availability to keep your changes.",
@@ -394,6 +396,8 @@ export const am: Partial<Record<CopyKey, string>> = {
   "prefs.back": "ተመለስ",
   "prefs.skip": "ዝለል",
   "onboard.continue": "ቀጥል",
+  "proAvail.lead": "ከ{date} ጀምሮ ሰዓት ይከፈታል — ሁልጊዜ ቢያንስ 2 ቀን ቀድመው፣ የዝግጅት ጊዜ እንዲኖርዎት",
+  "booking.slotTooSoon": "ይህ ሰዓት በ2 ቀን የዝግጅት ጊዜ ውስጥ ነው። እባክዎ የሚቀጥለውን ጊዜ ይምረጡ።",
   "prefs.saved": "ምርጫዎችዎ ተቀምጠዋል።",
 };
 

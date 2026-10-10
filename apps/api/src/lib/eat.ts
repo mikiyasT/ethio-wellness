@@ -1,10 +1,11 @@
+import { MIN_LEAD_DAYS } from "@ethio-wellness/shared/lead";
+
 /** East Africa Time is UTC+3 year-round. Hour labels match the provider grid. */
 
 export const EAT = "Africa/Addis_Ababa";
 const EAT_OFFSET_MS = 3 * 60 * 60 * 1000;
 
-/** Providers cannot open a slot on today or tomorrow in East Africa Time. */
-export const MIN_LEAD_DAYS = 2;
+export { MIN_LEAD_DAYS };
 
 export const EAT_HOUR_LABELS = [
   "12:00 AM",

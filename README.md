@@ -93,7 +93,7 @@ stripe listen --events checkout.session.completed --forward-to localhost:4000/st
 
 Put the CLI’s signing secret in `STRIPE_WEBHOOK_SECRET`. Use card `4242 4242 4242 4242` in Stripe test mode. Success returns to `/client/booking-confirmation`, which waits until the webhook marks the booking upcoming. Cancelling a paid booking does not refund it; pilot refunds are done in the Stripe dashboard.
 
-Hold, checkout, and join are rate limited per IP (20 holds, 10 checkouts, and 30 join lookups per 10 minutes).
+Hold, checkout, and join are rate limited per IP (20 holds, 10 checkouts, and 30 join lookups per 10 minutes). Those counts stay in the memory of each API process, so they are not one shared ceiling when Railway runs more than one replica.
 
 ### Cutover (Phase F)
 
