@@ -21,6 +21,7 @@ export interface ProDraft {
   practiceMore: string;
   languages: LanguageId[];
   specialties: CategoryId[];
+  country: string;
 }
 
 /** Blank defaults — name comes from registration, not Hana. */
@@ -33,6 +34,7 @@ export const emptyProDraft = (name = ""): ProDraft => ({
   practiceMore: "",
   languages: [],
   specialties: [],
+  country: "ET",
 });
 
 export function draftFromProfessional(pro: DbProfessional): ProDraft {
@@ -45,6 +47,7 @@ export function draftFromProfessional(pro: DbProfessional): ProDraft {
     practiceMore: pro.practiceMore,
     languages: [...pro.languages],
     specialties: [...pro.specialties],
+    country: pro.country ?? "ET",
   };
 }
 
@@ -61,6 +64,7 @@ export async function loadProDraftForUser(userId: string, fallbackName = ""): Pr
         practiceMore: pro.practiceMore,
         languages: pro.languages,
         specialties: pro.specialties,
+        country: pro.country || "ET",
       };
     } catch {
       return emptyProDraft(fallbackName);

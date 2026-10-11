@@ -7,10 +7,12 @@ import { requestPasswordReset } from "@/lib/auth-api";
 import { useLocale } from "@/lib/locale";
 import { usePublicApi } from "@/lib/public-api";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 export default function ForgotPasswordPage() {
   const { t } = useLocale();
+  const router = useRouter();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,7 +21,13 @@ export default function ForgotPasswordPage() {
     const email = String(new FormData(event.currentTarget).get("email") ?? "").trim();
     setError("");
     try {
-      if (usePublicApi()) await requestPasswordReset(email);
+      if (usePublicApi()) {
+        const result = await requestPasswordReset(email);
+        if (result.resetUrl?.startsWith("/reset-password?")) {
+          router.push(result.resetUrl);
+          return;
+        }
+      }
       setSent(true);
     } catch {
       setError("Could not start a reset. Please try again.");

@@ -37,6 +37,8 @@ const profileSchema = z
     languages: z.array(z.string()).max(8).optional(),
     specialties: z.array(z.string()).max(12).optional(),
     feeCents: z.number().int().min(0).max(100_000).optional(),
+    country: z.string().trim().min(2).max(2).optional(),
+    timezone: z.string().trim().min(1).max(64).optional(),
   })
   .refine((body) => Object.keys(body).length > 0, { message: "empty" });
 
@@ -71,8 +73,12 @@ professionalsRouter.patch("/me", async (req, res) => {
   try {
     const user = await professionalFromCookie(req.headers.cookie);
     const professional = await updateMyProfessional(user.professionalId!, parsed.data);
-    if (professional === "invalid_catalog") {
-      res.status(400).json({ error: "invalid_catalog" });
+    if (
+      professional === "invalid_catalog" ||
+      professional === "invalid_country" ||
+      professional === "invalid_timezone"
+    ) {
+      res.status(400).json({ error: professional });
       return;
     }
     res.json({ professional });

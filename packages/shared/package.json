@@ -10,6 +10,10 @@
     "./lead": {
       "types": "./lead.d.ts",
       "default": "./lead.js"
+    },
+    "./countries": {
+      "types": "./countries.d.ts",
+      "default": "./countries.js"
     }
   }
 }

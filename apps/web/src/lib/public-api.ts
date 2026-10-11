@@ -30,6 +30,7 @@ type ApiProfessional = {
   name: string;
   title: string;
   city: string;
+  country: string;
   credentials: string;
   bio: string;
   practiceMore: string;
@@ -79,6 +80,7 @@ function toDbProfessional(pro: ApiProfessional): DbProfessional {
     name: pro.name,
     title: pro.title,
     city: pro.city,
+    country: pro.country,
     credentials: pro.credentials,
     bio: pro.bio,
     practiceMore: pro.practiceMore,

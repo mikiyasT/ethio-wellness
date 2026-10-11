@@ -39,12 +39,18 @@ export async function replaceMyOpenHours(
   professionalId: string,
   hours: { date: string; time: string }[],
 ) {
-  const earliest = minOpenDate();
+  const professional = await prisma.professional.findUnique({
+    where: { id: professionalId },
+    select: { timezone: true },
+  });
+  if (!professional) throw new AvailabilityError(404, "not_found");
+  const timeZone = professional.timezone;
+  const earliest = minOpenDate(new Date(), timeZone);
   const desired = new Map<string, { startsAt: Date; endsAt: Date }>();
   for (const hour of hours) {
-    const startsAt = startsAtFromEat(hour.date, hour.time);
+    const startsAt = startsAtFromEat(hour.date, hour.time, timeZone);
     if (!startsAt) throw new AvailabilityError(400, "invalid_hour");
-    if (eatDateIso(startsAt) < earliest) {
+    if (eatDateIso(startsAt, timeZone) < earliest) {
       throw new AvailabilityError(400, "availability_too_soon", earliest);
     }
     const key = startsAt.toISOString();
@@ -82,7 +88,7 @@ export async function replaceMyOpenHours(
       if (row.status !== "open") continue;
       if (desired.has(row.startsAt.toISOString())) continue;
       // Hours already inside the lead window stay. A request that includes them is rejected above.
-      if (eatDateIso(row.startsAt) < earliest) continue;
+      if (eatDateIso(row.startsAt, timeZone) < earliest) continue;
       await tx.slot.delete({ where: { id: row.id } });
     }
   });

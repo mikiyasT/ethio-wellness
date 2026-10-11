@@ -3,6 +3,8 @@
 import { routes } from "@ethio-wellness/shared";
 import { ButtonLink } from "@/components/ui/button";
 import { useLocale } from "@/lib/locale";
+import { isAwaitingApproval } from "@/lib/pro-approval";
+import { useSession } from "@/lib/session";
 import Image from "next/image";
 
 const LANGUAGES_ROWS = [
@@ -14,6 +16,14 @@ const LANGUAGES_ROWS = [
 
 export default function WelcomeHomePage() {
   const { t } = useLocale();
+  const { role, user, ready } = useSession();
+  const signedIn = ready && role !== "guest";
+  const accountHref =
+    role === "professional"
+      ? isAwaitingApproval(user.professionalStatus)
+        ? routes.professionalPending
+        : routes.professionalHome
+      : routes.clientHome;
 
   return (
     <div className="marketing w-full max-w-[100vw] overflow-x-clip">
@@ -52,9 +62,15 @@ export default function WelcomeHomePage() {
             >
               {t("home.ctaBrowse")}
             </ButtonLink>
-            <ButtonLink href={routes.login} variant="text" size="lg" className="font-extrabold">
-              {t("home.ctaSignIn")}
-            </ButtonLink>
+            {signedIn ? (
+              <ButtonLink href={accountHref} variant="text" size="lg" className="font-extrabold">
+                {t("home.ctaAccount")}
+              </ButtonLink>
+            ) : (
+              <ButtonLink href={routes.login} variant="text" size="lg" className="font-extrabold">
+                {t("home.ctaSignIn")}
+              </ButtonLink>
+            )}
           </div>
         </div>
 

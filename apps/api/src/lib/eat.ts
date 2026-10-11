@@ -1,9 +1,7 @@
 import { MIN_LEAD_DAYS } from "@ethio-wellness/shared/lead";
 
-/** East Africa Time is UTC+3 year-round. Hour labels match the provider grid. */
-
+/** East Africa Time. The default for Ethiopian professionals; no daylight saving. */
 export const EAT = "Africa/Addis_Ababa";
-const EAT_OFFSET_MS = 3 * 60 * 60 * 1000;
 
 export { MIN_LEAD_DAYS };
 
@@ -36,34 +34,44 @@ export const EAT_HOUR_LABELS = [
 
 const hourLabels = new Set<string>(EAT_HOUR_LABELS);
 
-export function startsAtFromEat(dateIso: string, timeLabel: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso) || !hourLabels.has(timeLabel)) return null;
-  const [year, month, day] = dateIso.split("-").map(Number);
-  const probe = new Date(Date.UTC(year!, month! - 1, day!));
-  if (
-    probe.getUTCFullYear() !== year ||
-    probe.getUTCMonth() !== month! - 1 ||
-    probe.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  const match = timeLabel.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
-  if (!match) return null;
-  let hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  const ampm = match[3];
-  if (ampm === "PM" && hours < 12) hours += 12;
-  if (ampm === "AM" && hours === 12) hours = 0;
-  return new Date(Date.UTC(year!, month! - 1, day!, hours - 3, minutes, 0));
+function part(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) {
+  return parts.find((item) => item.type === type)?.value ?? "";
 }
 
-/** Calendar date YYYY-MM-DD in East Africa Time. */
-export function eatDateIso(instant: Date): string {
-  const shifted = new Date(instant.getTime() + EAT_OFFSET_MS);
-  const year = shifted.getUTCFullYear();
-  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(shifted.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+/** Milliseconds the zone is ahead of UTC at this instant. */
+function zoneOffsetMs(timeZone: string, instant: Date): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instant);
+  let hour = Number(part(parts, "hour"));
+  if (hour === 24) hour = 0;
+  const asUtc = Date.UTC(
+    Number(part(parts, "year")),
+    Number(part(parts, "month")) - 1,
+    Number(part(parts, "day")),
+    hour,
+    Number(part(parts, "minute")),
+    Number(part(parts, "second")),
+  );
+  return asUtc - instant.getTime();
+}
+
+/** Calendar date YYYY-MM-DD in an IANA timezone. Defaults to East Africa Time. */
+export function eatDateIso(instant: Date, timeZone = EAT): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+  return `${part(parts, "year")}-${part(parts, "month")}-${part(parts, "day")}`;
 }
 
 export function addCalendarDays(dateIso: string, days: number): string {
@@ -75,7 +83,28 @@ export function addCalendarDays(dateIso: string, days: number): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Earliest EAT calendar date a provider may open. Oct 10 → Oct 12. */
-export function minOpenDate(now = new Date()): string {
-  return addCalendarDays(eatDateIso(now), MIN_LEAD_DAYS);
+/** Earliest calendar date, in `timeZone`, on which a provider may open an hour. */
+export function minOpenDate(now = new Date(), timeZone = EAT): string {
+  return addCalendarDays(eatDateIso(now, timeZone), MIN_LEAD_DAYS);
+}
+
+/** UTC instant for a wall-clock hour in `timeZone`. Defaults to East Africa Time. */
+export function startsAtFromEat(dateIso: string, timeLabel: string, timeZone = EAT): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso) || !hourLabels.has(timeLabel)) return null;
+  const [year, month, day] = dateIso.split("-").map(Number);
+  const probe = new Date(Date.UTC(year!, month! - 1, day!));
+  if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month! - 1 || probe.getUTCDate() !== day) {
+    return null;
+  }
+  const match = timeLabel.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const ampm = match[3];
+  if (ampm === "PM" && hours < 12) hours += 12;
+  if (ampm === "AM" && hours === 12) hours = 0;
+  const wallUtc = Date.UTC(year!, month! - 1, day!, hours, minutes, 0);
+  let utcMs = wallUtc - zoneOffsetMs(timeZone, new Date(wallUtc));
+  utcMs = wallUtc - zoneOffsetMs(timeZone, new Date(utcMs));
+  return new Date(utcMs);
 }

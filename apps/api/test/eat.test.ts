@@ -32,4 +32,21 @@ describe("East Africa Time lead window", () => {
     assert.equal(eatDateIso(lastRejected) < earliest, true);
     assert.equal(firstAllowed.toISOString(), "2026-10-11T21:00:00.000Z");
   });
+
+  it("follows the given timezone instead of a fixed UTC+3 offset", () => {
+    const lagos = "Africa/Lagos";
+    const justBeforeLagosMidnight = new Date("2026-10-09T22:59:59.999Z");
+    const lagosMidnight = new Date("2026-10-09T23:00:00.000Z");
+
+    assert.equal(eatDateIso(justBeforeLagosMidnight, lagos), "2026-10-09");
+    assert.equal(eatDateIso(lagosMidnight, lagos), "2026-10-10");
+    assert.equal(eatDateIso(justBeforeLagosMidnight), "2026-10-10");
+    assert.equal(minOpenDate(justBeforeLagosMidnight, lagos), "2026-10-11");
+    assert.equal(minOpenDate(justBeforeLagosMidnight), "2026-10-12");
+
+    const lagosStart = startsAtFromEat("2026-10-12", "12:00 AM", lagos);
+    const addisStart = startsAtFromEat("2026-10-12", "12:00 AM");
+    assert.equal(lagosStart?.toISOString(), "2026-10-11T23:00:00.000Z");
+    assert.equal(addisStart?.toISOString(), "2026-10-11T21:00:00.000Z");
+  });
 });

@@ -8,7 +8,7 @@
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "smoke": "tsx scripts/smoke.mts",
-    "test": "tsx --test test/eat.test.ts test/lead-time.test.ts",
+    "test": "tsx --test test/eat.test.ts test/lead-time.test.ts test/country.test.ts",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma migrate deploy && tsx prisma/seed.ts"

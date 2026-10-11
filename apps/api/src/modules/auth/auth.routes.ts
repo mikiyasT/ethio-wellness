@@ -5,6 +5,7 @@ import {
   AuthError,
   createSession,
   deleteSession,
+  changePassword,
   loginUser,
   registerUser,
   requestPasswordReset,
@@ -32,6 +33,11 @@ const forgotSchema = z.object({
 
 const resetSchema = z.object({
   token: z.string().min(20).max(200),
+  password: z.string().min(8).max(200),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
   password: z.string().min(8).max(200),
 });
 
@@ -98,8 +104,28 @@ authRouter.post("/forgot-password", async (req, res) => {
     res.status(400).json({ error: "invalid_body" });
     return;
   }
-  await requestPasswordReset(parsed.data.email);
-  res.json({ ok: true });
+  const resetUrl = await requestPasswordReset(parsed.data.email);
+  res.json(resetUrl ? { ok: true, resetUrl } : { ok: true });
+});
+
+authRouter.post("/password", async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "invalid_body" });
+    return;
+  }
+  try {
+    const token = readCookie(req.headers.cookie, SESSION_COOKIE);
+    const user = await userForSessionToken(token);
+    if (!user) {
+      res.status(401).json({ error: "unauthenticated" });
+      return;
+    }
+    await changePassword(user.id, parsed.data.currentPassword, parsed.data.password);
+    res.json({ ok: true });
+  } catch (error) {
+    if (!sendAuthError(res, error)) throw error;
+  }
 });
 
 authRouter.post("/reset-password", async (req, res) => {

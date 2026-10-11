@@ -116,6 +116,7 @@ function LoginInner() {
             label={t("login.password")}
             name="password"
             type="password"
+            revealable
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}

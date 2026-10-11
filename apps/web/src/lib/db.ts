@@ -46,6 +46,7 @@ export interface DbProfessional {
   name: string;
   title: string;
   city: string;
+  country?: string;
   credentials: string;
   bio: string;
   practiceMore: string;

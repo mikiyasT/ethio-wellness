@@ -89,6 +89,8 @@ model Professional {
   name         String
   title        String
   city         String
+  country      String             @default("ET")
+  timezone     String             @default("Africa/Addis_Ababa")
   credentials  String             @default("")
   bio          String
   practiceMore String             @default("")
