@@ -34,16 +34,21 @@ export const HOUR_SLOTS = [
 
 export type HourSlot = (typeof HOUR_SLOTS)[number];
 
-/** Calendar date and hour label in East Africa Time. */
-export function eatDateAndHour(instant: Date): { dateIso: string; timeLabel: string } {
+export const DEFAULT_PRO_TIMEZONE = "Africa/Addis_Ababa";
+
+/** Calendar date and hour label in the professional's timezone. */
+export function eatDateAndHour(
+  instant: Date,
+  timeZone = DEFAULT_PRO_TIMEZONE,
+): { dateIso: string; timeLabel: string } {
   const dateIso = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Addis_Ababa",
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(instant);
   const timeLabel = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Africa/Addis_Ababa",
+    timeZone,
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -53,8 +58,8 @@ export function eatDateAndHour(instant: Date): { dateIso: string; timeLabel: str
   return { dateIso, timeLabel };
 }
 
-export function eatTodayIso() {
-  return eatDateAndHour(new Date()).dateIso;
+export function eatTodayIso(timeZone = DEFAULT_PRO_TIMEZONE) {
+  return eatDateAndHour(new Date(), timeZone).dateIso;
 }
 
 export function toIsoDate(date: Date): string {

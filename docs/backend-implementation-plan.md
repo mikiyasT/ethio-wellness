@@ -2,10 +2,61 @@
 
 **Purpose:** Phased plan to stand up the real API, Postgres persistence, and cut the web app over from the browser `localStorage` pilot.  
 **Audience:** Implementation agents + founder review.  
-**Status:** Decisions locked — ready to implement from Phase A.
+**Status:** Phases A–F are merged on `master` (`4dab774`, PRs #7–#12). The next commit is branch `feature/country-timezone`. Do not start Phase 2 until the founder says go.
 
 **This program = guest-booking Phase 3 (real auth + Postgres) + Phase 1 Stripe leftover (real Checkout + webhook, test mode).**  
 WhatsApp OTP/templates and Daily.co rooms stay on a **separate Phase 2 track** (blocked on the founder’s Meta setup). Do not build them here.
+
+---
+
+## Resume here (2026-10-11)
+
+Saved before a Cursor update and a computer restart. Continue from this section. The phase specs below are the original program; they are done. This section is the live status.
+
+### Where the code is
+
+| Item | State |
+| --- | --- |
+| `master` | `4dab774` — Merge of PR #12, Phase F cutover. Tracks `origin/master`. |
+| This branch | `feature/country-timezone`, created from that master. Not merged until the pull request lands. |
+| Database | Neon database `ayzoncare`. Migration `20261010000000_professional_country_timezone` is already applied. Do not reset or re-seed production. |
+| Next step after merge | Update local `master` from origin, then wait. Phase 2 starts only when the founder says go. |
+
+### Done on master (do not redo)
+
+Phases A–F: Prisma on Neon, Railway API, cookie sessions, public directory from Postgres, professional hours and profile, Stripe Checkout plus webhook in test mode, guest holds, two-day notice when a professional opens hours, pending professionals until `ADMIN_TOKEN` approve. `AUTO_APPROVE_PROFESSIONALS` is false. No `otp_codes`, `message_log`, `reviews`, or `provider_payouts` tables. No refunds on cancel.
+
+### On this branch, not yet on master
+
+1. **Country and timezone groundwork.** `Professional.country` (ISO alpha-2, default `ET`) and `Professional.timezone` (IANA, default `Africa/Addis_Ababa`). Slot math uses that zone instead of a fixed UTC+3 offset. Ethiopia still behaves as East Africa Time. Onboarding sends country only; the server stores the primary timezone. Public professional payloads include `country` and `timezone`. No corridor pages, filters, or badges. No new languages.
+2. **Guest booking matches the calendar.** The two-day prep rule applies only when a professional adds hours. An hour already shown as open can be booked, including inside that window. A start time that has already passed is still rejected.
+3. **Sign-in and account.** `POST /auth/password` changes the password for the signed-in user and does not delete sessions. The account form stays hidden until Change password is clicked. A successful change is not reported as a failure. In local development, forgot-password can open the reset page; production still returns only `{ ok: true }` and does not reveal the token. The signed-in welcome page offers “Go to your account” once the session is known. The login password field has a show/hide control.
+
+### Approval, still with no admin page
+
+There is no admin screen, and none is in scope unless the founder asks. Approve with `POST /admin/professionals/:id/approve` and reject with `POST /admin/professionals/:id/reject`, both using `Authorization: Bearer` and `ADMIN_TOKEN`. Pending and rejected professionals see “Application under review” and are absent from the directory. Approving does not send email. The pending-page copy that mentions an email is ahead of the product.
+
+### Left untouched on purpose
+
+- Phase 2: WhatsApp OTP, templates, Daily.co, `/b/<token>` manage UI, `/my-bookings` via OTP.
+- Full admin console.
+- Refunds. Pilot refunds stay manual in the Stripe dashboard.
+- Session cookie shape and 30-day lifetime.
+- The partial unique index lives in raw SQL, not in `schema.prisma`.
+- Demo password `AyzonDemo!2026` stays in the README and seed only, not on the public login page. Seeded counselors such as Meron use `{slug}@example.com`.
+- Do not delete the real Dawit booking (`AYZ-YYKR`). Guest booking `AYZ-NWAX` is a real upcoming row for Meron; guest checkout writes only `Slot` and `bookings`, not `User` or `Session`.
+
+### How to run it again
+
+Use Node v24 at `~/.local/node/v24/bin` (system Node 12 cannot build this repo). API: `apps/api`, `npm run dev`, port 4000. Web: `apps/web`, `npx next dev -H 0.0.0.0 --port 3000`. Tests: `npm test` in `apps/api` (eat, lead time, country). Do not commit `.env`. Do not print database URLs, `ADMIN_TOKEN`, `SESSION_SECRET`, Stripe secrets, reset tokens, or password hashes.
+
+### Still open after this branch
+
+- Merge this pull request, then fast-forward local `master`.
+- Phase 2, only after an explicit go.
+- Phase 3 leftovers in `docs/guest-booking-phases.md`: CAPTCHA, no-show policy, funnel analytics, Daily.co legal review.
+- Meta Pixel script is still not loaded; events stay PageView, InitiateCheckout, and Purchase, with no PII.
+- `manageTokenHash` and `joinTokenHash` are stored and unused until a later manage-booking UI.
 
 ---
 
@@ -450,7 +501,7 @@ Provider UI may still show an EAT hour grid (12:00 AM–11:00 PM). On save, each
 
 ## 9. Ready to implement
 
-All founder questions and the three schema/scope corrections are locked. **Start with Phase A** on a new branch from `master`.
+Phases A–F are implemented and merged. The live resume point is **Resume here (2026-10-11)** at the top of this file. Do not start Phase A again. Do not start Phase 2 until the founder says go.
 
 Before first PR, ensure access to:
 
@@ -473,4 +524,4 @@ Before first PR, ensure access to:
 
 ---
 
-*Updated: Prisma · cookie sessions · Stripe Checkout+webhook (test) · ADMIN_TOKEN approval · Railway + Neon · slots as UTC `startsAt`/`endsAt` · Phase 2 WhatsApp/Daily.co excluded · partial unique index + hold sweeper · no reviews/payouts/otp/message_log tables.*
+*Updated 2026-10-11: Phases A–F merged. Branch `feature/country-timezone` adds country/timezone data, keeps the two-day rule on professional hours only, and fixes sign-in/account password follow-ups. Phase 2 still excluded. No admin page.*

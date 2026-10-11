@@ -8,6 +8,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import {
   addDays,
   calendarCells,
+  DEFAULT_PRO_TIMEZONE,
   eatDateAndHour,
   eatTodayIso,
   formatDayChip,
@@ -21,7 +22,13 @@ import {
 import type { DbSlot } from "@/lib/db";
 import { useLocale } from "@/lib/locale";
 import { fetchProfessionalBookings } from "@/lib/bookings-api";
-import { fetchMyAvailability, ProRequestError, saveMyAvailability, type MySlot } from "@/lib/pro-api";
+import {
+  fetchMyAvailability,
+  fetchMyProfessional,
+  ProRequestError,
+  saveMyAvailability,
+  type MySlot,
+} from "@/lib/pro-api";
 import { useSession } from "@/lib/session";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,7 +46,8 @@ function AvailabilityInner() {
   const { user, ready } = useSession();
   const fromOnboarding = search.get("from") === "onboarding";
 
-  const todayIso = useMemo(() => eatTodayIso(), []);
+  const [timeZone, setTimeZone] = useState(DEFAULT_PRO_TIMEZONE);
+  const todayIso = useMemo(() => eatTodayIso(timeZone), [timeZone]);
   const minDateIso = useMemo(() => addDays(todayIso, MIN_LEAD_DAYS), [todayIso]);
   const leadLabel = useMemo(
     () => parseIsoDate(minDateIso).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -98,7 +106,10 @@ function AvailabilityInner() {
     void (async () => {
       if (!user.professionalId) return;
       setProId(user.professionalId);
-      const loaded = (await fetchMyAvailability()).map((slot) => slotInEat(slot, user.professionalId!));
+      const profile = await fetchMyProfessional();
+      const zone = profile.timezone || DEFAULT_PRO_TIMEZONE;
+      setTimeZone(zone);
+      const loaded = (await fetchMyAvailability()).map((slot) => slotInEat(slot, user.professionalId!, zone));
       setSlots(loaded);
       setBaselineSlots(loaded);
       await loadBookedMeta(user.professionalId, loaded);
@@ -184,7 +195,7 @@ function AvailabilityInner() {
       .map((slot) => ({ date: slot.dateIso, time: slot.timeLabel }));
     setSaveError("");
     try {
-      const loaded = (await saveMyAvailability(hours)).map((slot) => slotInEat(slot, proId));
+      const loaded = (await saveMyAvailability(hours)).map((slot) => slotInEat(slot, proId, timeZone));
       setSlots(loaded);
       setBaselineSlots(loaded);
       await loadBookedMeta(proId, loaded);
@@ -455,8 +466,8 @@ function AvailabilityInner() {
   );
 }
 
-function slotInEat(slot: MySlot, professionalId: string): DbSlot {
-  const { dateIso, timeLabel } = eatDateAndHour(new Date(slot.startsAt));
+function slotInEat(slot: MySlot, professionalId: string, timeZone: string): DbSlot {
+  const { dateIso, timeLabel } = eatDateAndHour(new Date(slot.startsAt), timeZone);
   const status = slot.status === "held" ? "held" : slot.status === "booked" ? "booked" : "open";
   return {
     id: slot.id,

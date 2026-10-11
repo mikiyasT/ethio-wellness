@@ -176,7 +176,7 @@ export async function deleteSession(token: string | undefined) {
 
 export async function requestPasswordReset(email: string) {
   const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
-  if (!user) return;
+  if (!user) return null;
   const token = newOpaqueToken();
   await prisma.passwordReset.create({
     data: {
@@ -185,10 +185,21 @@ export async function requestPasswordReset(email: string) {
       expiresAt: new Date(Date.now() + RESET_MS),
     },
   });
+  const resetPath = `/reset-password?token=${encodeURIComponent(token)}`;
   if (process.env.NODE_ENV !== "production") {
-    const url = `${env.publicWebUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    console.info(`Password reset link for ${user.email}: ${url}`);
+    console.info(`Password reset link for ${user.email}: ${env.publicWebUrl}${resetPath}`);
+    return resetPath;
   }
+  return null;
+}
+
+export async function changePassword(userId: string, currentPassword: string, password: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AuthError(401, "unauthenticated");
+  const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!matches) throw new AuthError(400, "invalid_password");
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 }
 
 export async function resetPassword(token: string, password: string) {

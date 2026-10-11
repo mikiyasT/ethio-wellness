@@ -68,9 +68,16 @@ export function logoutAccount() {
 }
 
 export function requestPasswordReset(email: string) {
-  return authRequest<{ ok: true }>("/auth/forgot-password", {
+  return authRequest<{ ok: true; resetUrl?: string }>("/auth/forgot-password", {
     method: "POST",
     body: JSON.stringify({ email }),
+  });
+}
+
+export function changeAccountPassword(currentPassword: string, password: string) {
+  return authRequest<{ ok: true }>("/auth/password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, password }),
   });
 }
 

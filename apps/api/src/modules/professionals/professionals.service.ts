@@ -1,7 +1,14 @@
 import type { Professional } from "@prisma/client";
+import { isCountryCode, primaryTimeZone } from "@ethio-wellness/shared/countries";
 import { categories, languageIds, type CategoryId, type LanguageId } from "../catalog.js";
 import { releaseExpiredHolds } from "../../lib/hold-sweeper.js";
 import { prisma } from "../../lib/prisma.js";
+
+const ianaTimeZones = new Set(Intl.supportedValuesOf("timeZone"));
+
+export function isIanaTimeZone(value: string) {
+  return ianaTimeZones.has(value);
+}
 
 const allowedLanguages = new Set<string>(languageIds);
 const allowedCategories = new Set<string>(categories.map((category) => category.id));
@@ -28,6 +35,8 @@ export function toPublicProfessional(pro: Professional) {
     name: pro.name,
     title: pro.title,
     city: pro.city,
+    country: pro.country,
+    timezone: pro.timezone,
     credentials: pro.credentials,
     bio: pro.bio,
     practiceMore: pro.practiceMore,
@@ -93,10 +102,24 @@ export async function updateMyProfessional(
     languages?: string[];
     specialties?: string[];
     feeCents?: number;
+    country?: string;
+    timezone?: string;
   },
 ) {
   if (input.languages?.some((id) => !allowedLanguages.has(id))) return "invalid_catalog" as const;
   if (input.specialties?.some((id) => !allowedCategories.has(id))) return "invalid_catalog" as const;
+
+  const country = input.country?.trim().toUpperCase();
+  if (country !== undefined && !isCountryCode(country)) return "invalid_country" as const;
+  if (input.timezone !== undefined && !isIanaTimeZone(input.timezone)) return "invalid_timezone" as const;
+
+  let timezone = input.timezone;
+  if (country !== undefined && input.timezone === undefined) {
+    const derived = primaryTimeZone(country);
+    if (!derived || !isIanaTimeZone(derived)) return "invalid_country" as const;
+    timezone = derived;
+  }
+
   const pro = await prisma.professional.update({
     where: { id: professionalId },
     data: {
@@ -109,6 +132,8 @@ export async function updateMyProfessional(
       ...(input.languages !== undefined ? { languages: input.languages } : {}),
       ...(input.specialties !== undefined ? { specialties: input.specialties } : {}),
       ...(input.feeCents !== undefined ? { feeCents: input.feeCents } : {}),
+      ...(country !== undefined ? { country } : {}),
+      ...(timezone !== undefined ? { timezone } : {}),
     },
   });
   return toPublicProfessional(pro);

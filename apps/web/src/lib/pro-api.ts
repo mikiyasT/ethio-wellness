@@ -14,6 +14,8 @@ export type MyProfessional = {
   languages: LanguageId[];
   specialties: CategoryId[];
   feeCents: number;
+  country: string;
+  timezone: string;
   status: "pending" | "approved" | "rejected";
 };
 

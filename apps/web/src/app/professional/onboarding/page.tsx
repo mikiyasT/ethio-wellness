@@ -1,6 +1,7 @@
 "use client";
 
 import { LANGUAGES, categories, routes, type CategoryId, type LanguageId } from "@ethio-wellness/shared";
+import { COUNTRY_CODES } from "@ethio-wellness/shared/countries";
 import { Chip } from "@/components/ui/chip";
 import { Alert } from "@/components/ui/alert";
 import { TextAreaField, TextField } from "@/components/ui/field";
@@ -9,7 +10,7 @@ import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 export default function ProfessionalOnboardingPage() {
   const { t } = useLocale();
@@ -17,6 +18,12 @@ export default function ProfessionalOnboardingPage() {
   const { user, ready } = useSession();
   const [draft, setDraft] = useState<ProDraft>(emptyProDraft());
   const [error, setError] = useState("");
+  const countries = useMemo(() => {
+    const names = new Intl.DisplayNames(["en"], { type: "region" });
+    return COUNTRY_CODES.map((code) => ({ code, label: names.of(code) ?? code })).sort((a, b) =>
+      a.label.localeCompare(b.label, "en"),
+    );
+  }, []);
 
   useEffect(() => {
     if (!ready || !user.userId) return;
@@ -106,6 +113,20 @@ export default function ProfessionalOnboardingPage() {
           placeholder="e.g. Clinical Psychologist"
           onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
         />
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-ink">{t("proOnboard.country")}</span>
+          <select
+            className="w-full min-h-[50px] rounded-[10px] border border-border bg-surface px-4 text-base text-ink"
+            value={draft.country}
+            onChange={(event) => setDraft((current) => ({ ...current, country: event.target.value }))}
+          >
+            {countries.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-ink">{t("proOnboard.city")}</span>
           <select

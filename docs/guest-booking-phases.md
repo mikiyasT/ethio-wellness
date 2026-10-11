@@ -77,4 +77,4 @@ Deferred until founder Meta Business / API number / templates ready.
 
 ---
 
-*Last updated: Phase F. Stripe Checkout and webhook, cookie auth, and Postgres are in place. Phase 2 (WhatsApp, manage tokens, Daily.co) is still open. Schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`.*
+*Last updated 2026-10-11. Phases A–F of the backend plan are merged on master. Branch `feature/country-timezone` is the unmerged follow-up: professional country and timezone (Ethiopia / Addis Ababa by default), two-day notice only when a professional adds hours, and sign-in/account password fixes. Resume details are at the top of `docs/backend-implementation-plan.md`. Phase 2 (WhatsApp, manage tokens, Daily.co) is still not started. Schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`.*

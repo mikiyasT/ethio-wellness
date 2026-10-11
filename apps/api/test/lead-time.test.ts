@@ -98,7 +98,7 @@ describe("availability lead time", () => {
     assert.equal(eatDateIso(saved[0]!.startsAt), earliest);
   });
 
-  it("rejects a hold on a slot dated tomorrow in East Africa Time", async () => {
+  it("lets a client hold an open slot that is already inside the lead window", async () => {
     const tomorrow = addCalendarDays(eatDateIso(new Date()), 1);
     const startsAt = startsAtFromEat(tomorrow, "4:00 PM");
     assert.ok(startsAt);
@@ -116,11 +116,11 @@ describe("availability lead time", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ slotId: slot.id }),
     });
-    const body = (await response.json()) as { error?: string };
-    assert.equal(response.status, 409);
-    assert.equal(body.error, "slot_too_soon");
+    const body = (await response.json()) as { booking?: { id: string }; error?: string };
+    assert.equal(response.status, 201);
+    assert.ok(body.booking?.id);
 
     const stored = await prisma.slot.findUnique({ where: { id: slot.id } });
-    assert.equal(stored?.status, "open");
+    assert.equal(stored?.status, "held");
   });
 });
