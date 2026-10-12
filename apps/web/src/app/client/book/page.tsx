@@ -122,6 +122,7 @@ function ClientBookInner() {
           bookingId = created.id;
           setHold(created);
         }
+        const bookerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (isGuest) {
           await updateHold(bookingId, {
             guestFirstName: firstName,
@@ -129,9 +130,10 @@ function ClientBookInner() {
             guestEmail: email,
             guestPhone: phone,
             guestNote: note,
+            bookerTimeZone,
           });
         } else {
-          await updateHold(bookingId, {});
+          await updateHold(bookingId, { bookerTimeZone });
         }
         const params = new URLSearchParams({
           pro: professional.slug,

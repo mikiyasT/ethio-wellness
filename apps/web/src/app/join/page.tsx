@@ -5,7 +5,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
-import { fetchJoin } from "@/lib/bookings-api";
+import { DailyRoom } from "@/components/video/daily-room";
+import { fetchJoin, startGuestVideo } from "@/lib/bookings-api";
 import { db, formatFee, type DbBooking, type DbProfessional } from "@/lib/db";
 import { usePublicApi } from "@/lib/public-api";
 import {
@@ -28,8 +29,15 @@ export default function JoinRecoveryPage() {
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState<DbBooking | null>(null);
   const [professional, setProfessional] = useState<DbProfessional | null>(null);
-  const [videoNote, setVideoNote] = useState(false);
+  const [videoNote, setVideoNote] = useState("");
+  const [video, setVideo] = useState<{ token: string; roomUrl: string } | null>(null);
+  const [joining, setJoining] = useState(false);
   const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const prefilled = new URLSearchParams(window.location.search).get("code");
+    if (prefilled) setCode(prefilled);
+  }, []);
 
   useEffect(() => {
     if (!booking) return;
@@ -40,7 +48,8 @@ export default function JoinRecoveryPage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setVideoNote(false);
+    setVideoNote("");
+    setVideo(null);
     const sessionCode = normalizeSessionCode(code);
     const guestEmail = normalizeEmail(email);
     if (!sessionCode || !guestEmail) {
@@ -91,11 +100,26 @@ export default function JoinRecoveryPage() {
     setBooking(null);
     setProfessional(null);
     setError("");
-    setVideoNote(false);
+    setVideoNote("");
+    setVideo(null);
+  }
+
+  async function onJoinVideo() {
+    if (!booking) return;
+    setVideoNote("");
+    setJoining(true);
+    try {
+      const room = await startGuestVideo(booking.sessionCode, email);
+      setVideo({ token: room.token, roomUrl: room.roomUrl });
+    } catch (caught) {
+      setVideoNote(caught instanceof Error ? caught.message : t("join.videoStub"));
+    } finally {
+      setJoining(false);
+    }
   }
 
   if (booking && professional) {
-    const windowState = getJoinWindow(booking.slotAt, now);
+    const windowState = getJoinWindow(booking.slotAt, now, booking.endsAt);
     const whenLocal = formatBookerLocal(booking.slotAt);
     return (
       <div className="mx-auto max-w-xl px-4 py-12">
@@ -145,16 +169,16 @@ export default function JoinRecoveryPage() {
                 : t("join.ready")}
           </div>
 
-          <Button
-            className="mt-4 w-full"
-            disabled={!windowState.canJoin}
-            onClick={() => setVideoNote(true)}
-          >
-            {t("sessions.join")}
-          </Button>
+          {video ? (
+            <DailyRoom roomUrl={video.roomUrl} token={video.token} />
+          ) : (
+            <Button className="mt-4 w-full" disabled={!windowState.canJoin || joining} onClick={() => void onJoinVideo()}>
+              {t("sessions.join")}
+            </Button>
+          )}
           {videoNote ? (
             <div className="mt-3">
-              <Alert tone="info">{t("join.videoStub")}</Alert>
+              <Alert tone="info">{videoNote}</Alert>
             </div>
           ) : null}
           <Button className="mt-3 w-full" variant="secondary" onClick={onAddToCalendar}>

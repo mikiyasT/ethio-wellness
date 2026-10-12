@@ -6,12 +6,20 @@ import { AuthError, professionalFromCookie, userForSessionToken } from "../auth/
 import {
   BookingError,
   cancelBooking,
+  claimableCount,
+  claimGuestBookings,
   createHold,
+  decideChange,
   findJoinBooking,
   getBooking,
+  getManagedBooking,
   listForProfessional,
   listMine,
+  manageCancel,
+  manageReschedule,
   startCheckout,
+  startGuestVideo,
+  startProfessionalVideo,
   updateHoldGuest,
 } from "./bookings.service.js";
 
@@ -27,6 +35,7 @@ const guestSchema = z.object({
   guestEmail: z.string().trim().email().optional(),
   guestPhone: z.string().trim().max(40).optional(),
   guestNote: z.string().trim().max(1000).optional(),
+  bookerTimeZone: z.string().trim().min(1).max(80).optional(),
 });
 
 const LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -100,6 +109,11 @@ bookingsRouter.get("/join", async (req, res) => {
     res.status(400).json({ error: "invalid_body" });
     return;
   }
+  const codeKey = code.trim().toUpperCase();
+  if (!allowRequest(`join-code:${codeKey}`, 8, LIMIT_WINDOW_MS)) {
+    res.status(429).json({ error: "rate_limited" });
+    return;
+  }
   try {
     const booking = await findJoinBooking(code, email);
     if (!booking) {
@@ -107,6 +121,82 @@ bookingsRouter.get("/join", async (req, res) => {
       return;
     }
     res.json({ booking });
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
+bookingsRouter.post("/join/video", async (req, res) => {
+  const code = typeof req.body?.code === "string" ? req.body.code : "";
+  const email = typeof req.body?.email === "string" ? req.body.email : "";
+  if (!code || !email) {
+    res.status(400).json({ error: "invalid_body" });
+    return;
+  }
+  const codeKey = code.trim().toUpperCase();
+  if (!allowRequest(`join-video:${codeKey}`, 8, LIMIT_WINDOW_MS)) {
+    res.status(429).json({ error: "rate_limited" });
+    return;
+  }
+  try {
+    const video = await startGuestVideo(code, email);
+    res.json(video);
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
+bookingsRouter.get("/claimable", async (req, res) => {
+  try {
+    const user = await userForSessionToken(readCookie(req.headers.cookie, SESSION_COOKIE));
+    if (!user) throw new AuthError(401, "unauthenticated");
+    if (user.role !== "client") throw new AuthError(403, "forbidden");
+    const count = await claimableCount(user.email);
+    res.json({ count });
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
+bookingsRouter.post("/claim", async (req, res) => {
+  try {
+    const user = await userForSessionToken(readCookie(req.headers.cookie, SESSION_COOKIE));
+    if (!user) throw new AuthError(401, "unauthenticated");
+    if (user.role !== "client") throw new AuthError(403, "forbidden");
+    const claimed = await claimGuestBookings(user.id, user.email);
+    res.json({ claimed });
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
+bookingsRouter.get("/manage/:token", async (req, res) => {
+  try {
+    const managed = await getManagedBooking(req.params.token);
+    res.json(managed);
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
+bookingsRouter.post("/manage/:token/cancel", async (req, res) => {
+  try {
+    const result = await manageCancel(req.params.token);
+    res.json(result);
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
+bookingsRouter.post("/manage/:token/reschedule", async (req, res) => {
+  const slotId = typeof req.body?.slotId === "string" ? req.body.slotId : "";
+  if (!slotId) {
+    res.status(400).json({ error: "invalid_body" });
+    return;
+  }
+  try {
+    const result = await manageReschedule(req.params.token, slotId);
+    res.json(result);
   } catch (error) {
     if (!sendError(res, error)) throw error;
   }
@@ -147,17 +237,41 @@ bookingsRouter.get("/:id", async (req, res) => {
   }
 });
 
+bookingsRouter.post("/:id/video", async (req, res) => {
+  try {
+    const user = await professionalFromCookie(req.headers.cookie);
+    const video = await startProfessionalVideo(req.params.id, user.professionalId!);
+    res.json(video);
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
+bookingsRouter.post("/:id/decide", async (req, res) => {
+  if (typeof req.body?.accept !== "boolean") {
+    res.status(400).json({ error: "invalid_body" });
+    return;
+  }
+  try {
+    const user = await professionalFromCookie(req.headers.cookie);
+    const booking = await decideChange(req.params.id, user.professionalId!, req.body.accept);
+    res.json({ booking });
+  } catch (error) {
+    if (!sendError(res, error)) throw error;
+  }
+});
+
 bookingsRouter.post("/:id/cancel", async (req, res) => {
   try {
     const user = await userForSessionToken(readCookie(req.headers.cookie, SESSION_COOKIE));
     if (!user) throw new AuthError(401, "unauthenticated");
     if (user.role !== "client" && user.role !== "professional") throw new AuthError(403, "forbidden");
-    const booking = await cancelBooking(req.params.id, {
+    const result = await cancelBooking(req.params.id, {
       role: user.role,
       userId: user.id,
       professionalId: user.professionalId,
     });
-    res.json({ booking });
+    res.json(result);
   } catch (error) {
     if (!sendError(res, error)) throw error;
   }

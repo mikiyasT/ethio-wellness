@@ -97,7 +97,7 @@ Hold, checkout, and join are rate limited per IP (20 holds, 10 checkouts, and 30
 
 ### Cutover (Phase F)
 
-The browser does not keep a domain database. Login uses the API only. Shared types `SlotInstant` and `BookingInstant` are the UTC shape. Phase 2 tables (`otp_codes`, `message_log`, `reviews`, `provider_payouts`) are not in the schema.
+The browser does not keep a domain database. Login uses the API only. Shared types `SlotInstant` and `BookingInstant` are the UTC shape. The schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`. The next build is the rescoped Phase 2 in `docs/guest-booking-phases.md` (guest email plus a Daily.co session). It is not started.
 
 With the API running:
 

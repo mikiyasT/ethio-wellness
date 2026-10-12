@@ -106,6 +106,10 @@ export interface DbBooking {
   guestPhone?: string;
   guestNote?: string;
   claimedAt?: string;
+  endsAt?: string;
+  changeRequest?: "cancel" | "reschedule" | null;
+  changeRequestSlotId?: string | null;
+  joinPhase?: "soon" | "open" | "ended" | "invalid";
 }
 
 export type ThemePref = "light" | "dark";

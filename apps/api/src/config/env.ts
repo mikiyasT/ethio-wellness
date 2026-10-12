@@ -12,6 +12,10 @@ const schema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   PUBLIC_WEB_URL: z.string().default("http://localhost:3000"),
+  EMAIL_FROM: z.string().default("Ayzon <bookings@ayzoncare.com>"),
+  RESEND_API_KEY: z.string().optional(),
+  POSTMARK_SERVER_TOKEN: z.string().optional(),
+  DAILY_API_KEY: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -48,4 +52,8 @@ export const env = {
   stripeSecretKey: parsed.data.STRIPE_SECRET_KEY,
   stripeWebhookSecret: parsed.data.STRIPE_WEBHOOK_SECRET,
   publicWebUrl: parsed.data.PUBLIC_WEB_URL,
+  emailFrom: parsed.data.EMAIL_FROM,
+  resendApiKey: parsed.data.RESEND_API_KEY,
+  postmarkToken: parsed.data.POSTMARK_SERVER_TOKEN,
+  dailyApiKey: parsed.data.DAILY_API_KEY,
 };

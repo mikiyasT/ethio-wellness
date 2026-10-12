@@ -1,7 +1,7 @@
 # Ayzon Guest Booking — Phase Tracker
 
 **Source:** Merged build plan (Cursor plan + founder design).  
-**Standing rules:** no account required to book · WhatsApp ≠ video venue · Meta Pixel generic only · no clinical session notes · minimal PII.
+**Standing rules:** no account required to book · guest identity for the pilot is email · video is Daily.co and the raw room link stays hidden · Meta Pixel generic only · no clinical session notes · minimal PII. WhatsApp and SMS are deferred.
 
 ---
 
@@ -44,18 +44,29 @@
 
 ---
 
-## Phase 2 — WhatsApp identity + guest self-serve (**not started**)
+## Phase 2 — Pilot essentials: guest booking via email + working video (**not started**)
 
-Deferred until founder Meta Business / API number / templates ready.
+Scope is minimal. Two things must work end to end before the pilot test: a guest books and gets everything by email, and a video session actually connects. Rescoped 2026-10-11. The earlier WhatsApp / SMS version of this phase is dropped.
 
-- [ ] WhatsApp primary identity; email optional/fallback
-- [ ] OTP via WhatsApp (3 attempts, 60s resend, SMS fallback)
-- [ ] Transactional WA messages (confirm, reminders, join, receipt, reschedule/cancel)
-- [ ] Manage booking `/b/<token>`
-- [ ] `/my-bookings` via WhatsApp OTP (no password)
-- [ ] Join lobby → Daily.co (token at join; never expose raw room URL)
-- [ ] Explicit one-tap claim on register/login
-- [ ] Reschedule/cancel policy (>24h free; inside 24h provider discretion)
+- [ ] **Booking email carries the session code.** On confirmation, email the guest: session code (`AYZ-XXXXX`), professional name, date and time in the booker’s local zone, a one-tap join link with the code pre-filled (`/join?code=AYZ-XXXXX`), the `/b/<token>` manage link, and an `.ics` attachment.
+- [ ] **Reminders and notices.** Reminders at 24 hours, 1 hour, and 5 minutes, with the join link first. Also send the receipt, and notices for reschedule and cancel. Send through Resend or Postmark with SPF, DKIM, and DMARC.
+- [ ] **Join stays session code + email.** Verify the pair on `/join`. The emailed link pre-fills the code. Rate-limit attempts per code. A code works only in the join window: 15 minutes before the start through the session end.
+- [ ] **Working video session.** Daily.co prebuilt embed: pre-call lobby (camera and mic check), waiting room, expiring participant tokens minted at join time. The raw room link is never exposed. Acceptance: a real full-length Addis Ababa ↔ US call with acceptable two-way audio and video.
+- [ ] **Manage-booking page** at `/b/<token>`. Reschedule and cancel with no login, using the manage token already stored on the booking.
+- [ ] **Claim guest bookings.** When a guest creates an account with the same verified email, one tap links their past guest bookings to the account.
+- [ ] **Cancel and reschedule rules.** Free when more than 24 hours out. Inside 24 hours, the professional decides.
+
+### Explicitly not Phase 2
+
+- SMS one-time codes
+- WhatsApp in any form
+- “My bookings” via an emailed link
+- A new password step for guests
+- Native apps
+
+### Founder setup (no code)
+
+- [ ] Verify `ayzoncare.com` in the email provider (SPF, DKIM, DMARC). This is the only founder task before Phase 2 can send mail.
 
 ---
 
@@ -72,9 +83,9 @@ Deferred until founder Meta Business / API number / templates ready.
 ## Open founder questions
 
 1. Phone required for Ethiopia-first? (Phase 1: optional)
-2. Reschedule/cancel inside 24h — confirm default
+2. Reschedule/cancel inside 24h — **decided for Phase 2:** free when more than 24 hours out; inside 24 hours the professional decides
 3. Soft hold duration tune (default 10 min)
 
 ---
 
-*Last updated 2026-10-11. Phases A–F of the backend plan are merged on master. Branch `feature/country-timezone` is the unmerged follow-up: professional country and timezone (Ethiopia / Addis Ababa by default), two-day notice only when a professional adds hours, and sign-in/account password fixes. Resume details are at the top of `docs/backend-implementation-plan.md`. Phase 2 (WhatsApp, manage tokens, Daily.co) is still not started. Schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`.*
+*Last updated 2026-10-11. Phases A–F and PR #13 are merged on `master` (`afa2cf3`). Phase 2 is rescoped to email plus a working Daily.co session, and is not started. WhatsApp, SMS, “My bookings” by emailed link, a guest password step, and native apps are deferred. Schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`.*
