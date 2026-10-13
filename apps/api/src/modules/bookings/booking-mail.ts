@@ -225,6 +225,7 @@ export async function sendProfessionalRequest(bookingId: string, kind: "cancel" 
   try {
     await sendMail({
       to,
+      audience: "provider",
       subject: `A guest asked to ${kind} ${booking.sessionCode}`,
       text: [
         `${booking.guestFirstName || "A guest"} asked to ${kind} the session on ${when}.`,
@@ -244,6 +245,7 @@ async function sendProviderNewBooking(booking: MailBooking) {
   if (!to || !booking.sessionCode) return;
   await sendMail({
     to,
+    audience: "provider",
     subject: `New session ${booking.sessionCode}`,
     text: [
       `${booking.guestFirstName || "A guest"} booked a session with you.`,
@@ -264,6 +266,7 @@ async function sendProviderReminder(booking: MailBooking, lead: string) {
   if (!to || !booking.sessionCode) return;
   await sendMail({
     to,
+    audience: "provider",
     subject: `Session ${booking.sessionCode} starts ${lead}`,
     text: [
       `Join: ${providerJoinUrl()}`,
@@ -295,6 +298,7 @@ async function sendProviderChange(booking: MailBooking, kind: "cancelled" | "res
         ].join("\n");
   await sendMail({
     to,
+    audience: "provider",
     subject: kind === "cancelled" ? `Session ${booking.sessionCode} was cancelled` : `Session ${booking.sessionCode} was rescheduled`,
     text,
   });

@@ -6,11 +6,20 @@ export const BRAND_REPLY_TO = "support@ayzoncare.com";
 const LEGACY_FROM = "Ayzon <bookings@ayzoncare.com>";
 const BRAND_SIGNOFF = "አይዞን!";
 const BRAND_SITE = "ayzoncare.com";
+const BRAND_GOLD = "#f5c35a";
+
+export type MailAudience = "guest" | "provider";
+
+const FOOTER_LINE: Record<MailAudience, string> = {
+  guest: "We got you.",
+  provider: "Your work heals.",
+};
 
 export type OutboundMail = {
   to: string;
   subject: string;
   text: string;
+  audience?: MailAudience;
   ics?: { filename: string; content: string };
 };
 
@@ -20,18 +29,19 @@ export function fromAddress() {
   return configured;
 }
 
-export function withBrandFooter(text: string) {
-  return `${text.replace(/\s+$/, "")}\n\n${BRAND_SIGNOFF}\n${BRAND_SITE}`;
+export function withBrandFooter(text: string, audience: MailAudience = "guest") {
+  return `${text.replace(/\s+$/, "")}\n\n${BRAND_SIGNOFF}\n${FOOTER_LINE[audience]}\n${BRAND_SITE}`;
 }
 
 /** HTML part uses the OS Ethiopic font. No webfont link or @font-face. */
-export function renderMailHtml(text: string) {
+export function renderMailHtml(text: string, audience: MailAudience = "guest") {
   const paragraphs = text
     .replace(/\s+$/, "")
     .split(/\n{2,}/)
     .map((block) => `<p style="margin:0 0 16px;">${linkify(escapeHtml(block)).replace(/\n/g, "<br>")}</p>`)
     .join("");
-  return `<!DOCTYPE html><html><body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#1c1917;">${paragraphs}<p style="margin:28px 0 0;font-size:22px;font-weight:700;">${BRAND_SIGNOFF}</p><p style="margin:4px 0 0;font-size:12px;color:#78716c;">${BRAND_SITE}</p></body></html>`;
+  const line = escapeHtml(FOOTER_LINE[audience]);
+  return `<!DOCTYPE html><html><body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#1c1917;">${paragraphs}<p style="margin:28px 0 0;font-size:22px;font-weight:700;color:${BRAND_GOLD};">${BRAND_SIGNOFF}</p><p style="margin:4px 0 0;">${line}</p><p style="margin:4px 0 0;font-size:12px;color:#78716c;">${BRAND_SITE}</p></body></html>`;
 }
 
 function escapeHtml(value: string) {
@@ -84,7 +94,7 @@ export async function sendMail(message: OutboundMail): Promise<"sent" | "logged"
     console.error(`Email skipped (no provider configured): ${message.subject}`);
     return "skipped";
   }
-  const text = withBrandFooter(message.text);
+  const text = withBrandFooter(message.text, message.audience);
   console.log(`\n----- email (no provider; logged locally) -----\nFrom: ${fromAddress()}\nReply-To: ${BRAND_REPLY_TO}\nTo: ${message.to}\nSubject: ${message.subject}\n\n${text}\n-----`);
   return "logged";
 }
@@ -101,8 +111,8 @@ async function sendResend(message: OutboundMail) {
       reply_to: BRAND_REPLY_TO,
       to: [message.to],
       subject: message.subject,
-      text: withBrandFooter(message.text),
-      html: renderMailHtml(message.text),
+      text: withBrandFooter(message.text, message.audience),
+      html: renderMailHtml(message.text, message.audience),
       attachments: message.ics
         ? [{ filename: message.ics.filename, content: Buffer.from(message.ics.content).toString("base64") }]
         : undefined,
@@ -126,8 +136,8 @@ async function sendPostmark(message: OutboundMail) {
       ReplyTo: BRAND_REPLY_TO,
       To: message.to,
       Subject: message.subject,
-      TextBody: withBrandFooter(message.text),
-      HtmlBody: renderMailHtml(message.text),
+      TextBody: withBrandFooter(message.text, message.audience),
+      HtmlBody: renderMailHtml(message.text, message.audience),
       MessageStream: "outbound",
       Attachments: message.ics
         ? [

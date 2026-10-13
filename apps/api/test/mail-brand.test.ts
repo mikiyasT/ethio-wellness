@@ -10,14 +10,19 @@ describe("email brand", () => {
     assert.equal(BRAND_REPLY_TO, "support@ayzoncare.com");
   });
 
-  it("closes plain text with the sign-off and the site", () => {
-    const text = withBrandFooter("Join: https://ayzoncare.com/join?code=AYZ-TEST");
-    assert.match(text, /አይዞን!\nayzoncare.com$/);
+  it("closes guest and provider mail with their own line", () => {
+    const guest = withBrandFooter("Join: https://ayzoncare.com/join?code=AYZ-TEST");
+    const provider = withBrandFooter("Join: https://ayzoncare.com/professional", "provider");
+    assert.match(guest, /አይዞን!\nWe got you\.\nayzoncare.com$/);
+    assert.match(provider, /አይዞን!\nYour work heals\.\nayzoncare.com$/);
   });
 
   it("renders HTML with a prominent sign-off and no webfont", () => {
     const html = renderMailHtml("Join: https://ayzoncare.com/join?code=AYZ-TEST");
-    assert.match(html, /አይዞን!/);
+    const provider = renderMailHtml("New session", "provider");
+    assert.match(html, /color:#f5c35a;">አይዞን!/);
+    assert.match(html, /We got you\./);
+    assert.match(provider, /Your work heals\./);
     assert.match(html, /font-size:12px;color:#78716c;/);
     assert.equal(html.includes("fonts.googleapis"), false);
     assert.equal(html.includes("@font-face"), false);
