@@ -1,11 +1,17 @@
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import type Stripe from "stripe";
+import type { CancelledBy, ChangeRequestKind } from "@prisma/client";
 import { env } from "../../config/env.js";
+import { ensureDailyRoom, mintDailyToken, VideoUnavailable } from "../../lib/daily.js";
 import { holdExpiry, releaseExpiredHolds } from "../../lib/hold-sweeper.js";
+import { guestCanChange, joinPhase } from "../../lib/join-window.js";
+import { isTimeZone } from "../../lib/mail.js";
 import { prisma } from "../../lib/prisma.js";
 import { hashToken, newOpaqueToken } from "../../lib/session-cookie.js";
 import { getStripe } from "../../lib/stripe.js";
+import { sealToken } from "../../lib/token-seal.js";
+import { sendConfirmationAndReceipt, sendGuestNotice, sendProfessionalRequest } from "./booking-mail.js";
 
 const MAX_HELD_PER_EMAIL = 3;
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -38,6 +44,8 @@ const bookingSelect = {
   guestEmail: true,
   guestPhone: true,
   guestNote: true,
+  changeRequest: true,
+  changeRequestSlotId: true,
   professional: {
     select: {
       id: true,
@@ -86,6 +94,9 @@ function toPublicBooking(booking: BookingRow) {
     guestEmail: booking.guestEmail,
     guestPhone: booking.guestPhone,
     guestNote: booking.guestNote,
+    changeRequest: booking.changeRequest,
+    changeRequestSlotId: booking.changeRequestSlotId,
+    joinPhase: joinPhase(booking.slot.startsAt, booking.slot.endsAt),
   };
 }
 
@@ -168,6 +179,7 @@ export async function updateHoldGuest(
     guestEmail?: string;
     guestPhone?: string;
     guestNote?: string;
+    bookerTimeZone?: string;
   },
   client?: { id: string; name: string; email: string },
 ) {
@@ -192,6 +204,9 @@ export async function updateHoldGuest(
     },
   });
   if (pending >= MAX_HELD_PER_EMAIL) throw new BookingError(409, "too_many_holds");
+  if (input.bookerTimeZone !== undefined && !isTimeZone(input.bookerTimeZone)) {
+    throw new BookingError(400, "invalid_timezone");
+  }
 
   const nameParts = client?.name.trim().split(/\s+/) ?? [];
   await prisma.booking.update({
@@ -208,6 +223,7 @@ export async function updateHoldGuest(
             : undefined,
       ...(input.guestPhone !== undefined ? { guestPhone: input.guestPhone.trim() || null } : {}),
       ...(input.guestNote !== undefined ? { guestNote: input.guestNote.trim() || null } : {}),
+      ...(input.bookerTimeZone ? { bookerTimeZone: input.bookerTimeZone } : {}),
     },
   });
 
@@ -279,7 +295,9 @@ export async function confirmPaidCheckout(input: {
 }) {
   await releaseExpiredHolds();
   const sessionCode = await unusedSessionCode();
-  const manageTokenHash = hashToken(newOpaqueToken());
+  const manageToken = newOpaqueToken();
+  const manageTokenHash = hashToken(manageToken);
+  const manageTokenSeal = sealToken(manageToken);
   const joinTokenHash = hashToken(newOpaqueToken());
 
   try {
@@ -313,10 +331,11 @@ export async function confirmPaidCheckout(input: {
           status: "upcoming",
           sessionCode,
           manageTokenHash,
+          manageTokenSeal,
           joinTokenHash,
           checkoutSessionId: input.checkoutSessionId,
           paymentIntentId: input.paymentIntentId,
-          linkState: "pending",
+          linkState: "ready",
           holdExpiresAt: null,
         },
       });
@@ -328,6 +347,11 @@ export async function confirmPaidCheckout(input: {
       });
       return "confirmed" as const;
     });
+    if (outcome === "confirmed" || outcome === "already") {
+      void sendConfirmationAndReceipt(input.bookingId).catch((error) => {
+        console.error("Booking email failed", input.bookingId, error);
+      });
+    }
     return outcome;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -354,13 +378,33 @@ export async function cancelBooking(id: string, actor: { role: "client" | "profe
   if (!asClient && !asPro) throw new BookingError(403, "forbidden");
   if (booking.status !== "held" && booking.status !== "upcoming") throw new BookingError(409, "not_cancellable");
 
+  if (asClient && booking.status === "upcoming" && !guestCanChange(booking.slot.startsAt)) {
+    return requestChange(booking.id, "cancel", null);
+  }
+
+  await applyCancel(booking.id, asClient ? "client" : "professional");
+  if (booking.guestEmail) {
+    void sendGuestNotice(booking.id, "cancelled").catch((error) => console.error(error));
+  }
+
+  const loaded = await loadBooking(id);
+  if (!loaded) throw new BookingError(404, "not_found");
+  return { booking: toPublicBooking(loaded), pending: false };
+}
+
+async function applyCancel(id: string, cancelledBy: CancelledBy) {
+  const booking = await prisma.booking.findUnique({ where: { id }, include: { slot: true } });
+  if (!booking) throw new BookingError(404, "not_found");
   await prisma.$transaction(async (tx) => {
     await tx.booking.update({
       where: { id: booking.id },
       data: {
         status: "cancelled",
-        cancelledBy: asClient ? "client" : "professional",
+        cancelledBy,
         holdExpiresAt: null,
+        changeRequest: null,
+        changeRequestSlotId: null,
+        changeRequestAt: null,
       },
     });
     const ownsHeld = booking.status === "held" && booking.slot.holdBookingId === booking.id;
@@ -373,9 +417,21 @@ export async function cancelBooking(id: string, actor: { role: "client" | "profe
     }
   });
 
+}
+
+async function requestChange(id: string, kind: ChangeRequestKind, slotId: string | null) {
+  const existing = await prisma.booking.findUnique({ where: { id }, select: { changeRequest: true } });
+  if (!existing) throw new BookingError(404, "not_found");
+  if (existing.changeRequest) throw new BookingError(409, "change_pending");
+  await prisma.booking.update({
+    where: { id },
+    data: { changeRequest: kind, changeRequestSlotId: slotId, changeRequestAt: new Date() },
+  });
+  void sendGuestNotice(id, "request").catch((error) => console.error(error));
+  void sendProfessionalRequest(id, kind).catch((error) => console.error(error));
   const loaded = await loadBooking(id);
   if (!loaded) throw new BookingError(404, "not_found");
-  return toPublicBooking(loaded);
+  return { booking: toPublicBooking(loaded), pending: true as const };
 }
 
 export async function findJoinBooking(code: string, email: string) {
@@ -419,4 +475,203 @@ export async function listForProfessional(professionalId: string) {
 export function paymentIntentIdOf(session: Stripe.Checkout.Session) {
   if (typeof session.payment_intent === "string") return session.payment_intent;
   return session.payment_intent?.id ?? null;
+}
+
+async function bookingByManageToken(token: string) {
+  return prisma.booking.findUnique({ where: { manageTokenHash: hashToken(token) }, select: bookingSelect });
+}
+
+export async function getManagedBooking(token: string) {
+  const booking = await bookingByManageToken(token);
+  if (!booking || booking.status === "held") throw new BookingError(404, "not_found");
+  const slots =
+    booking.status === "upcoming"
+      ? await prisma.slot.findMany({
+          where: { professionalId: booking.professionalId, status: "open", startsAt: { gt: new Date() } },
+          orderBy: { startsAt: "asc" },
+          take: 48,
+          select: { id: true, startsAt: true, endsAt: true },
+        })
+      : [];
+  return {
+    booking: toPublicBooking(booking),
+    guestCanChange: guestCanChange(booking.slot.startsAt),
+    openSlots: slots.map((slot) => ({
+      id: slot.id,
+      startsAt: slot.startsAt.toISOString(),
+      endsAt: slot.endsAt.toISOString(),
+    })),
+  };
+}
+
+export async function manageCancel(token: string) {
+  const booking = await bookingByManageToken(token);
+  if (!booking) throw new BookingError(404, "not_found");
+  if (booking.status !== "upcoming") throw new BookingError(409, "not_cancellable");
+  if (!guestCanChange(booking.slot.startsAt)) return requestChange(booking.id, "cancel", null);
+  await applyCancel(booking.id, "guest");
+  void sendGuestNotice(booking.id, "cancelled").catch((error) => console.error(error));
+  const loaded = await loadBooking(booking.id);
+  if (!loaded) throw new BookingError(404, "not_found");
+  return { booking: toPublicBooking(loaded), pending: false as const };
+}
+
+export async function manageReschedule(token: string, slotId: string) {
+  const booking = await bookingByManageToken(token);
+  if (!booking) throw new BookingError(404, "not_found");
+  if (booking.status !== "upcoming") throw new BookingError(409, "not_cancellable");
+  const slot = await prisma.slot.findUnique({ where: { id: slotId } });
+  if (!slot || slot.professionalId !== booking.professionalId || slot.status !== "open" || slot.id === booking.slotId) {
+    throw new BookingError(409, "slot_unavailable");
+  }
+  if (!guestCanChange(booking.slot.startsAt)) return requestChange(booking.id, "reschedule", slotId);
+  await applyReschedule(booking.id, slotId);
+  void sendGuestNotice(booking.id, "rescheduled").catch((error) => console.error(error));
+  const loaded = await loadBooking(booking.id);
+  if (!loaded) throw new BookingError(404, "not_found");
+  return { booking: toPublicBooking(loaded), pending: false as const };
+}
+
+async function applyReschedule(bookingId: string, slotId: string) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking || booking.status !== "upcoming") throw new BookingError(409, "not_cancellable");
+      const taken = await tx.slot.updateMany({
+        where: { id: slotId, status: "open", professionalId: booking.professionalId },
+        data: { status: "booked", holdExpiresAt: null, holdBookingId: null },
+      });
+      if (taken.count !== 1) throw new BookingError(409, "slot_unavailable");
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          slotId,
+          changeRequest: null,
+          changeRequestSlotId: null,
+          changeRequestAt: null,
+        },
+      });
+      await tx.slot.updateMany({
+        where: { id: booking.slotId, status: "booked" },
+        data: { status: "open", holdExpiresAt: null, holdBookingId: null },
+      });
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new BookingError(409, "slot_unavailable");
+    }
+    throw error;
+  }
+}
+
+export async function decideChange(bookingId: string, professionalId: string, accept: boolean) {
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: bookingSelect });
+  if (!booking) throw new BookingError(404, "not_found");
+  if (booking.professionalId !== professionalId) throw new BookingError(403, "forbidden");
+  if (!booking.changeRequest || booking.status !== "upcoming") throw new BookingError(409, "no_request");
+  if (!accept) {
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: { changeRequest: null, changeRequestSlotId: null, changeRequestAt: null },
+    });
+    const loaded = await loadBooking(bookingId);
+    if (!loaded) throw new BookingError(404, "not_found");
+    return toPublicBooking(loaded);
+  }
+  if (booking.changeRequest === "cancel") {
+    await applyCancel(bookingId, "professional");
+    void sendGuestNotice(bookingId, "cancelled").catch((error) => console.error(error));
+  } else {
+    if (!booking.changeRequestSlotId) throw new BookingError(409, "slot_unavailable");
+    await applyReschedule(bookingId, booking.changeRequestSlotId);
+    void sendGuestNotice(bookingId, "rescheduled").catch((error) => console.error(error));
+  }
+  const loaded = await loadBooking(bookingId);
+  if (!loaded) throw new BookingError(404, "not_found");
+  return toPublicBooking(loaded);
+}
+
+function dailyRoomName(sessionCode: string) {
+  return `ayz-${sessionCode.replace(/^AYZ-/i, "").toLowerCase()}`;
+}
+
+async function mintRoom(bookingId: string, owner: boolean, userName: string) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: {
+      id: true,
+      status: true,
+      sessionCode: true,
+      dailyRoomName: true,
+      dailyRoomUrl: true,
+      guestFirstName: true,
+      slot: { select: { startsAt: true, endsAt: true } },
+    },
+  });
+  if (!booking?.sessionCode || booking.status !== "upcoming") throw new BookingError(409, "join_closed");
+  if (joinPhase(booking.slot.startsAt, booking.slot.endsAt) !== "open") throw new BookingError(409, "join_closed");
+  try {
+    const room =
+      booking.dailyRoomName && booking.dailyRoomUrl
+        ? { name: booking.dailyRoomName, url: booking.dailyRoomUrl }
+        : await ensureDailyRoom({ name: dailyRoomName(booking.sessionCode), endsAt: booking.slot.endsAt });
+    if (!booking.dailyRoomName) {
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { dailyRoomName: room.name, dailyRoomUrl: room.url, linkState: "ready" },
+      });
+    }
+    const token = await mintDailyToken({
+      roomName: room.name,
+      endsAt: booking.slot.endsAt,
+      owner,
+      userName,
+    });
+    return { token, roomUrl: room.url, expiresAt: booking.slot.endsAt.toISOString() };
+  } catch (error) {
+    if (error instanceof VideoUnavailable) throw new BookingError(503, "video_unavailable");
+    throw error;
+  }
+}
+
+export async function startGuestVideo(code: string, email: string) {
+  const sessionCode = code.trim().toUpperCase().replace(/[\s_]/g, "");
+  const normalized = /^[0-9A-HJKMNPQRSTVWXYZ]{4}$/.test(sessionCode) ? `AYZ-${sessionCode}` : sessionCode;
+  const booking = await prisma.booking.findFirst({
+    where: { sessionCode: normalized, guestEmail: normalizeEmail(email), status: "upcoming" },
+    select: { id: true, guestFirstName: true },
+  });
+  if (!booking) throw new BookingError(404, "not_found");
+  return mintRoom(booking.id, false, booking.guestFirstName || "Guest");
+}
+
+export async function startProfessionalVideo(bookingId: string, professionalId: string) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { id: true, professionalId: true, professional: { select: { name: true } } },
+  });
+  if (!booking || booking.professionalId !== professionalId) throw new BookingError(403, "forbidden");
+  return mintRoom(booking.id, true, booking.professional.name);
+}
+
+export async function claimableCount(email: string) {
+  return prisma.booking.count({
+    where: {
+      guestEmail: normalizeEmail(email),
+      clientId: null,
+      status: { in: ["upcoming", "completed", "cancelled"] },
+    },
+  });
+}
+
+export async function claimGuestBookings(userId: string, email: string) {
+  const result = await prisma.booking.updateMany({
+    where: {
+      guestEmail: normalizeEmail(email),
+      clientId: null,
+      status: { in: ["upcoming", "completed", "cancelled"] },
+    },
+    data: { clientId: userId, claimedAt: new Date() },
+  });
+  return result.count;
 }

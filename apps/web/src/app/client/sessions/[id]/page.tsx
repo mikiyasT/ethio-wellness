@@ -2,7 +2,7 @@
 
 import { categoryById, routes } from "@ethio-wellness/shared";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cancelApiBooking, fetchBooking } from "@/lib/bookings-api";
@@ -23,6 +23,7 @@ export default function ClientSessionDetailPage() {
   const [booking, setBooking] = useState<DbBooking | null | undefined>(undefined);
   const [professional, setProfessional] = useState<DbProfessional | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [pendingNote, setPendingNote] = useState("");
 
   useEffect(() => {
     if (!ready) return;
@@ -64,11 +65,18 @@ export default function ClientSessionDetailPage() {
     );
   }
 
-  const readyLink = booking.linkState === "ready";
-
   async function onCancel() {
-    if (usePublicApi()) await cancelApiBooking(booking!.id);
-    else await db.bookings.cancel(booking!.id, "client");
+    if (usePublicApi()) {
+      const result = await cancelApiBooking(booking!.id);
+      if (result.pending) {
+        setBooking(result.booking);
+        setConfirmCancel(false);
+        setPendingNote("Inside 24 hours your professional decides. The session stays booked until they accept.");
+        return;
+      }
+    } else {
+      await db.bookings.cancel(booking!.id, "client");
+    }
     router.push(`${routes.clientSessions}?tab=cancelled`);
   }
 
@@ -123,13 +131,31 @@ export default function ClientSessionDetailPage() {
       </dl>
 
       <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
-        <p className="text-sm text-ink-2">{readyLink ? t("session.videoReady") : t("session.videoPending")}</p>
+        <p className="text-sm text-ink-2">
+          {booking.sessionCode
+            ? "Join opens 15 minutes before the start. Use your session code and the email you booked with."
+            : t("session.videoPending")}
+        </p>
         <div className="mt-3">
-          <Button disabled={!readyLink} block>
-            {t("sessions.join")}
-          </Button>
+          {booking.status === "upcoming" && booking.sessionCode ? (
+            <ButtonLink href={`/join?code=${encodeURIComponent(booking.sessionCode)}`} block>
+              {t("sessions.join")}
+            </ButtonLink>
+          ) : (
+            <Button disabled block>
+              {t("sessions.join")}
+            </Button>
+          )}
         </div>
       </div>
+
+      {pendingNote || booking.changeRequest === "cancel" ? (
+        <div className="mt-4">
+          <Alert tone="warning">
+            {pendingNote || "Inside 24 hours your professional decides. The session stays booked until they accept."}
+          </Alert>
+        </div>
+      ) : null}
 
       <div className="mt-4 space-y-3 rounded-2xl border border-border bg-surface p-5">
         <Button variant="secondary" disabled block>

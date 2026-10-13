@@ -3,7 +3,10 @@
 import { categoryById } from "@ethio-wellness/shared";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
-import { fetchProfessionalBookings } from "@/lib/bookings-api";
+import { DailyRoom } from "@/components/video/daily-room";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { decideChange, fetchProfessionalBookings, startProfessionalVideo } from "@/lib/bookings-api";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
 import { usePublicApi } from "@/lib/public-api";
 import { formatProviderEat, guestDisplayName, guestFirstName } from "@/lib/guest-booking";
@@ -27,6 +30,8 @@ export default function ProfessionalBookingsPage() {
   const [tab, setTab] = useState("upcoming");
   const [bookings, setBookings] = useState<DbBooking[]>([]);
   const [clientsById, setClientsById] = useState<Record<string, DbUser>>({});
+  const [video, setVideo] = useState<{ id: string; token: string; roomUrl: string } | null>(null);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     if (!ready || !user.userId) return;
@@ -52,6 +57,27 @@ export default function ProfessionalBookingsPage() {
     })();
   }, [ready, user.userId, user.professionalId]);
 
+  async function refresh() {
+    if (usePublicApi()) setBookings(await fetchProfessionalBookings());
+  }
+
+  async function onDecide(id: string, accept: boolean) {
+    setNote("");
+    await decideChange(id, accept);
+    setNote(accept ? "The change is saved and the guest is emailed." : "You declined the request. The session stays as booked.");
+    await refresh();
+  }
+
+  async function onJoin(id: string) {
+    setNote("");
+    try {
+      const room = await startProfessionalVideo(id);
+      setVideo({ id, token: room.token, roomUrl: room.roomUrl });
+    } catch (caught) {
+      setNote(caught instanceof Error ? caught.message : "Video isn’t available right now.");
+    }
+  }
+
   const items = useMemo(() => {
     return bookings.filter((booking) => {
       if (tab === "upcoming") return booking.status === "upcoming";
@@ -74,6 +100,11 @@ export default function ProfessionalBookingsPage() {
           ]}
         />
       </div>
+      {note ? (
+        <div className="mt-4">
+          <Alert tone="info">{note}</Alert>
+        </div>
+      ) : null}
       <div className="mt-6 space-y-4">
         {items.length === 0 ? (
           <EmptyState title="No bookings yet" body="When clients book you, they will appear here." />
@@ -99,6 +130,31 @@ export default function ProfessionalBookingsPage() {
                     {booking.guestEmail ? ` · ${booking.guestEmail}` : ""}
                   </p>
                 ) : null}
+                {booking.status === "upcoming" && usePublicApi() ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => void onJoin(booking.id)}>
+                      Join session
+                    </Button>
+                  </div>
+                ) : null}
+                {booking.changeRequest ? (
+                  <div className="mt-3 rounded-xl border border-border bg-surface-warm p-3">
+                    <p className="text-sm">
+                      {booking.changeRequest === "cancel"
+                        ? "This guest asked to cancel. Inside 24 hours, you decide."
+                        : "This guest asked to move the session. Inside 24 hours, you decide."}
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <Button size="sm" onClick={() => void onDecide(booking.id, true)}>
+                        Accept
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => void onDecide(booking.id, false)}>
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                {video?.id === booking.id ? <DailyRoom roomUrl={video.roomUrl} token={video.token} /> : null}
               </article>
             );
           })

@@ -1,6 +1,5 @@
 /**
- * Guest booking helpers — Phase 1 pilot.
- * Phase 2: WhatsApp OTP, manage links, Daily.co join.
+ * Guest booking helpers. Video join opens 15 minutes before the start and closes at session end.
  */
 
 export const SLOT_HOLD_MINUTES = 10;
@@ -161,19 +160,19 @@ export function normalizeSessionCode(raw: string): string {
   return cleaned;
 }
 
-/** Join opens 15 min before start, closes 30 min after (pilot lobby window). */
-export function getJoinWindow(slotAt: string, now = new Date()) {
+/** Join opens 15 minutes before the start and closes when the session ends. */
+export function getJoinWindow(slotAt: string, now = new Date(), endsAt?: string) {
   const start = new Date(slotAt).getTime();
+  const end = endsAt ? new Date(endsAt).getTime() : start + 60 * 60_000;
   const openAt = start - 15 * 60_000;
-  const closeAt = start + 30 * 60_000;
   const t = now.getTime();
-  if (Number.isNaN(start)) {
+  if (Number.isNaN(start) || Number.isNaN(end)) {
     return { canJoin: false as const, phase: "invalid" as const, opensInMs: 0 };
   }
   if (t < openAt) {
     return { canJoin: false as const, phase: "soon" as const, opensInMs: openAt - t };
   }
-  if (t > closeAt) {
+  if (t > end) {
     return { canJoin: false as const, phase: "ended" as const, opensInMs: 0 };
   }
   return { canJoin: true as const, phase: "open" as const, opensInMs: 0 };

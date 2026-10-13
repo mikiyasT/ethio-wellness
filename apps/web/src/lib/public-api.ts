@@ -9,6 +9,8 @@ export function apiBase() {
   if (typeof window === "undefined") return CONFIGURED_API_URL;
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return CONFIGURED_API_URL;
+  // A phone on https must call the API on the same secure origin. Next proxies /backend to the API.
+  if (window.location.protocol === "https:") return `${window.location.origin}/backend`;
   let port = "4000";
   try {
     port = new URL(CONFIGURED_API_URL).port || "4000";

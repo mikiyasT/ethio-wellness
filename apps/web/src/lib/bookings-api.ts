@@ -44,6 +44,9 @@ export type ApiBooking = {
   guestEmail: string | null;
   guestPhone: string | null;
   guestNote: string | null;
+  changeRequest: "cancel" | "reschedule" | null;
+  changeRequestSlotId: string | null;
+  joinPhase: "soon" | "open" | "ended" | "invalid";
 };
 
 const MESSAGES: Record<string, string> = {
@@ -54,6 +57,12 @@ const MESSAGES: Record<string, string> = {
   stripe_unavailable: "Card checkout is not available right now.",
   not_found: "Booking not found",
   forbidden: "You cannot change this booking",
+  change_pending: "You already have a request waiting for your professional.",
+  not_cancellable: "This booking can no longer be changed.",
+  join_closed: "Join is open from 15 minutes before the session until it ends.",
+  video_unavailable: "Video isn’t available right now. Your booking is still confirmed.",
+  rate_limited: "Too many attempts. Wait a few minutes and try again.",
+  no_request: "There is no change waiting for a decision.",
 };
 
 async function bookingRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -106,7 +115,10 @@ export function toDbBooking(booking: ApiBooking): DbBooking {
     specialty: booking.specialty,
     dateLabel: formatBookerLocal(booking.startsAt),
     slotAt: booking.startsAt,
-    durationMin: 60,
+    durationMin: Math.max(
+      1,
+      Math.round((new Date(booking.endsAt).getTime() - new Date(booking.startsAt).getTime()) / 60_000),
+    ),
     fee: booking.feeCents / 100,
     feeCents: booking.feeCents,
     currency: booking.currency.toUpperCase(),
@@ -121,6 +133,10 @@ export function toDbBooking(booking: ApiBooking): DbBooking {
     guestEmail: booking.guestEmail ?? undefined,
     guestPhone: booking.guestPhone ?? undefined,
     guestNote: booking.guestNote ?? undefined,
+    endsAt: booking.endsAt,
+    changeRequest: booking.changeRequest,
+    changeRequestSlotId: booking.changeRequestSlotId,
+    joinPhase: booking.joinPhase,
   };
 }
 
@@ -160,6 +176,7 @@ export async function updateHold(
     guestEmail?: string;
     guestPhone?: string;
     guestNote?: string;
+    bookerTimeZone?: string;
   },
 ) {
   const body = await bookingRequest<{ booking: ApiBooking }>(`/bookings/holds/${encodeURIComponent(bookingId)}`, {
@@ -203,11 +220,84 @@ export async function fetchProfessionalBookings() {
 }
 
 export async function cancelApiBooking(id: string) {
-  const body = await bookingRequest<{ booking: ApiBooking }>(`/bookings/${encodeURIComponent(id)}/cancel`, {
+  const body = await bookingRequest<{ booking: ApiBooking; pending: boolean }>(`/bookings/${encodeURIComponent(id)}/cancel`, {
     method: "POST",
     body: JSON.stringify({}),
   });
+  return { booking: toDbBooking(body.booking), pending: body.pending };
+}
+
+export async function startGuestVideo(code: string, email: string) {
+  return bookingRequest<{ token: string; roomUrl: string; expiresAt: string }>("/bookings/join/video", {
+    method: "POST",
+    body: JSON.stringify({ code, email }),
+  });
+}
+
+export async function startProfessionalVideo(id: string) {
+  return bookingRequest<{ token: string; roomUrl: string; expiresAt: string }>(`/bookings/${encodeURIComponent(id)}/video`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export type ManagedBooking = {
+  booking: DbBooking;
+  professional: DbProfessional;
+  guestCanChange: boolean;
+  openSlots: { id: string; startsAt: string; endsAt: string }[];
+};
+
+export async function fetchManagedBooking(token: string) {
+  const body = await bookingRequest<{
+    booking: ApiBooking;
+    guestCanChange: boolean;
+    openSlots: { id: string; startsAt: string; endsAt: string }[];
+  } | null>(`/bookings/manage/${encodeURIComponent(token)}`);
+  if (!body) return null;
+  return {
+    booking: toDbBooking(body.booking),
+    professional: toProfessional(body.booking.professional),
+    guestCanChange: body.guestCanChange,
+    openSlots: body.openSlots,
+  } satisfies ManagedBooking;
+}
+
+export async function manageCancel(token: string) {
+  const body = await bookingRequest<{ booking: ApiBooking; pending: boolean }>(
+    `/bookings/manage/${encodeURIComponent(token)}/cancel`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
+  return { booking: toDbBooking(body.booking), pending: body.pending };
+}
+
+export async function manageReschedule(token: string, slotId: string) {
+  const body = await bookingRequest<{ booking: ApiBooking; pending: boolean }>(
+    `/bookings/manage/${encodeURIComponent(token)}/reschedule`,
+    { method: "POST", body: JSON.stringify({ slotId }) },
+  );
+  return { booking: toDbBooking(body.booking), pending: body.pending };
+}
+
+export async function decideChange(id: string, accept: boolean) {
+  const body = await bookingRequest<{ booking: ApiBooking }>(`/bookings/${encodeURIComponent(id)}/decide`, {
+    method: "POST",
+    body: JSON.stringify({ accept }),
+  });
   return toDbBooking(body.booking);
+}
+
+export async function fetchClaimable() {
+  const body = await bookingRequest<{ count: number }>("/bookings/claimable");
+  return body.count;
+}
+
+export async function claimGuestBookings() {
+  const body = await bookingRequest<{ claimed: number }>("/bookings/claim", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  return body.claimed;
 }
 
 export async function pollBooking(id: string, attempts = 12) {

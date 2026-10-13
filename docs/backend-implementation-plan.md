@@ -2,31 +2,31 @@
 
 **Purpose:** Phased plan to stand up the real API, Postgres persistence, and cut the web app over from the browser `localStorage` pilot.  
 **Audience:** Implementation agents + founder review.  
-**Status:** Phases A–F are merged on `master` (`4dab774`, PRs #7–#12). The next commit is branch `feature/country-timezone`. Do not start Phase 2 until the founder says go.
+**Status:** Phases A–F and the country/timezone follow-up are merged on `master` (`afa2cf3`, PRs #7–#13). The next build is the rescoped Phase 2 in `docs/guest-booking-phases.md`. Do not start it until the founder says go.
 
 **This program = guest-booking Phase 3 (real auth + Postgres) + Phase 1 Stripe leftover (real Checkout + webhook, test mode).**  
-WhatsApp OTP/templates and Daily.co rooms stay on a **separate Phase 2 track** (blocked on the founder’s Meta setup). Do not build them here.
+That program is done. Phase 2 was rescoped on 2026-10-11 to guest email plus a working Daily.co session. WhatsApp and SMS are deferred. Do not rebuild them here.
 
 ---
 
-## Resume here (2026-10-11)
+## Resume here (2026-10-11, after restart)
 
-Saved before a Cursor update and a computer restart. Continue from this section. The phase specs below are the original program; they are done. This section is the live status.
+Local `master` is fast-forwarded to the merged pull request. The phase specs below are the original program; they are done. This section is the live status.
 
 ### Where the code is
 
 | Item | State |
 | --- | --- |
-| `master` | `4dab774` — Merge of PR #12, Phase F cutover. Tracks `origin/master`. |
-| This branch | `feature/country-timezone`, created from that master. Not merged until the pull request lands. |
+| `master` | `afa2cf3` — Merge of PR #13. Tracks `origin/master`. |
+| Last branch | `feature/country-timezone` is merged. Do not keep working on it. |
 | Database | Neon database `ayzoncare`. Migration `20261010000000_professional_country_timezone` is already applied. Do not reset or re-seed production. |
-| Next step after merge | Update local `master` from origin, then wait. Phase 2 starts only when the founder says go. |
+| Next step | Rescoped Phase 2 in `docs/guest-booking-phases.md` (email + Daily.co). Start only when the founder says go. Founder still verifies `ayzoncare.com` (SPF/DKIM/DMARC); that is not a code task. |
 
 ### Done on master (do not redo)
 
 Phases A–F: Prisma on Neon, Railway API, cookie sessions, public directory from Postgres, professional hours and profile, Stripe Checkout plus webhook in test mode, guest holds, two-day notice when a professional opens hours, pending professionals until `ADMIN_TOKEN` approve. `AUTO_APPROVE_PROFESSIONALS` is false. No `otp_codes`, `message_log`, `reviews`, or `provider_payouts` tables. No refunds on cancel.
 
-### On this branch, not yet on master
+### Merged in PR #13 (now on master)
 
 1. **Country and timezone groundwork.** `Professional.country` (ISO alpha-2, default `ET`) and `Professional.timezone` (IANA, default `Africa/Addis_Ababa`). Slot math uses that zone instead of a fixed UTC+3 offset. Ethiopia still behaves as East Africa Time. Onboarding sends country only; the server stores the primary timezone. Public professional payloads include `country` and `timezone`. No corridor pages, filters, or badges. No new languages.
 2. **Guest booking matches the calendar.** The two-day prep rule applies only when a professional adds hours. An hour already shown as open can be booked, including inside that window. A start time that has already passed is still rejected.
@@ -38,7 +38,7 @@ There is no admin screen, and none is in scope unless the founder asks. Approve 
 
 ### Left untouched on purpose
 
-- Phase 2: WhatsApp OTP, templates, Daily.co, `/b/<token>` manage UI, `/my-bookings` via OTP.
+- The old Phase 2 (WhatsApp, SMS, `/my-bookings` by one-time code) is dropped. The replacement scope is only in `docs/guest-booking-phases.md`.
 - Full admin console.
 - Refunds. Pilot refunds stay manual in the Stripe dashboard.
 - Session cookie shape and 30-day lifetime.
@@ -50,13 +50,12 @@ There is no admin screen, and none is in scope unless the founder asks. Approve 
 
 Use Node v24 at `~/.local/node/v24/bin` (system Node 12 cannot build this repo). API: `apps/api`, `npm run dev`, port 4000. Web: `apps/web`, `npx next dev -H 0.0.0.0 --port 3000`. Tests: `npm test` in `apps/api` (eat, lead time, country). Do not commit `.env`. Do not print database URLs, `ADMIN_TOKEN`, `SESSION_SECRET`, Stripe secrets, reset tokens, or password hashes.
 
-### Still open after this branch
+### Still open
 
-- Merge this pull request, then fast-forward local `master`.
-- Phase 2, only after an explicit go.
-- Phase 3 leftovers in `docs/guest-booking-phases.md`: CAPTCHA, no-show policy, funnel analytics, Daily.co legal review.
+- Rescoped Phase 2, only after an explicit go: confirmation and reminder email, join window, Daily.co video, `/b/<token>` manage page, claim-on-signup, and the 24-hour cancel rule. See `docs/guest-booking-phases.md`.
+- Phase 3 leftovers: CAPTCHA, no-show policy, funnel analytics, Daily.co legal review.
 - Meta Pixel script is still not loaded; events stay PageView, InitiateCheckout, and Purchase, with no PII.
-- `manageTokenHash` and `joinTokenHash` are stored and unused until a later manage-booking UI.
+- `manageTokenHash` and `joinTokenHash` are stored and unused until the Phase 2 manage page and video join.
 
 ---
 
@@ -130,8 +129,8 @@ Do **not** create: `reviews`, `provider_payouts`, `otp_codes`, `message_log`.
 | Doc | Role |
 | --- | --- |
 | `docs/ethio-wellness-ui-spec/README.md` | UI authority; no API contracts |
-| `docs/guest-booking-phases.md` | Phase 1 pilot done; Phase 3 = auth + Postgres; Phase 1 leftover = real Stripe; Phase 2 = WhatsApp / Daily.co (**out of this program**) |
-| Standing rules | No account required to book · WhatsApp ≠ video venue · minimal PII · no clinical notes |
+| `docs/guest-booking-phases.md` | Phase 1 pilot done; Phase 3 auth + Postgres done inside A–F; Phase 2 rescoped 2026-10-11 to email + Daily.co (**next program, not started**) |
+| Standing rules | No account required to book · guest identity is email · video is Daily.co · minimal PII · no clinical notes · no WhatsApp or SMS in Phase 2 |
 
 ---
 
@@ -149,13 +148,15 @@ Do **not** create: `reviews`, `provider_payouts`, `otp_codes`, `message_log`.
 8. New professionals stay **`pending`** until `ADMIN_TOKEN` approve; public directory lists **`approved` only**.
 9. Slot times stored only as UTC instants; double-booking prevented in the database.
 
-### Non-goals (Phase 2 and later — do not implement here)
+### Non-goals (for phases A–F — do not reopen them inside that program)
 
-- WhatsApp OTP, templates, transactional WhatsApp (blocked on founder Meta setup)
-- Daily.co video rooms
+These applied to the finished A–F program. The rescoped Phase 2 now includes Daily.co and the `/b/<token>` page. It still excludes WhatsApp, SMS, and the tables below.
+
+- WhatsApp OTP, templates, transactional WhatsApp
+- Daily.co video rooms (moved to the rescoped Phase 2; they were out of A–F)
 - `otp_codes` and `message_log` tables
 - `reviews` and `provider_payouts` tables
-- Manage-booking `/b/<token>` UI (store `manageTokenHash` now; UI is later)
+- Manage-booking `/b/<token>` UI during A–F (tokens were stored then; the page is Phase 2)
 - Full admin console (approve endpoint only)
 - CAPTCHA / fraud stack
 - HIPAA BAA / legal review
@@ -477,7 +478,7 @@ Provider UI may still show an EAT hour grid (12:00 AM–11:00 PM). On save, each
 | --- | --- |
 | Phase 1 pilot UI | Behavior reference (labels are display-only once on Postgres) |
 | Phase 1 leftover: real Stripe | **Phase E (required)** |
-| Phase 2 WhatsApp OTP/templates, Daily.co, `/b/<token>` UI | **Separate track — out of this program.** Keep `manageTokenHash` / `joinTokenHash` only |
+| Phase 2 (rescoped 2026-10-11): booking email, reminders, Daily.co, `/b/<token>`, claim-on-signup | **Next program.** Not part of A–F. WhatsApp and SMS stay deferred |
 | Phase 3 auth + Postgres | **Phases A–F** |
 
 ---
@@ -501,7 +502,7 @@ Provider UI may still show an EAT hour grid (12:00 AM–11:00 PM). On save, each
 
 ## 9. Ready to implement
 
-Phases A–F are implemented and merged. The live resume point is **Resume here (2026-10-11)** at the top of this file. Do not start Phase A again. Do not start Phase 2 until the founder says go.
+Phases A–F are implemented and merged. The live resume point is **Resume here (2026-10-11)** at the top of this file. Do not start Phase A again. The next build is the rescoped Phase 2 in `docs/guest-booking-phases.md`. Do not start it until the founder says go.
 
 Before first PR, ensure access to:
 
@@ -524,4 +525,4 @@ Before first PR, ensure access to:
 
 ---
 
-*Updated 2026-10-11: Phases A–F merged. Branch `feature/country-timezone` adds country/timezone data, keeps the two-day rule on professional hours only, and fixes sign-in/account password follow-ups. Phase 2 still excluded. No admin page.*
+*Updated 2026-10-11: Phases A–F and PR #13 are on `master` (`afa2cf3`). Phase 2 is rescoped to guest email plus Daily.co video. WhatsApp and SMS are deferred. No admin page.*

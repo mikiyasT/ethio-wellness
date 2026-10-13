@@ -45,6 +45,11 @@ enum LinkState {
   pending
 }
 
+enum ChangeRequestKind {
+  cancel
+  reschedule
+}
+
 model User {
   id           String     @id @default(cuid())
   name         String
@@ -141,7 +146,7 @@ model Booking {
   createdAt         DateTime      @default(now()) @db.Timestamptz(6)
   holdExpiresAt     DateTime?     @db.Timestamptz(6)
   sessionCode       String?       @unique
-  manageTokenHash   String?
+  manageTokenHash   String?       @unique
   joinTokenHash     String?
   checkoutSessionId String?
   paymentIntentId   String?
@@ -152,7 +157,19 @@ model Booking {
   guestEmail        String?
   guestPhone        String?
   guestNote         String?
+  bookerTimeZone    String?
   claimedAt         DateTime?     @db.Timestamptz(6)
+  manageTokenSeal   String?
+  dailyRoomName     String?       @unique
+  dailyRoomUrl      String?
+  confirmationSentAt DateTime?    @db.Timestamptz(6)
+  receiptSentAt     DateTime?     @db.Timestamptz(6)
+  reminder24hSentAt DateTime?     @db.Timestamptz(6)
+  reminder1hSentAt  DateTime?     @db.Timestamptz(6)
+  reminder5mSentAt  DateTime?     @db.Timestamptz(6)
+  changeRequest     ChangeRequestKind?
+  changeRequestSlotId String?
+  changeRequestAt   DateTime?     @db.Timestamptz(6)
 
   @@index([guestEmail])
   @@index([sessionCode, guestEmail])
