@@ -8,6 +8,9 @@ const mailSelect = {
   id: true,
   guestEmail: true,
   guestFirstName: true,
+  guestLastName: true,
+  guestPhone: true,
+  guestNote: true,
   sessionCode: true,
   manageTokenSeal: true,
   bookerTimeZone: true,
@@ -15,9 +18,11 @@ const mailSelect = {
   currency: true,
   confirmationSentAt: true,
   receiptSentAt: true,
-  professional: { select: { name: true, user: { select: { email: true } } } },
+  professional: { select: { name: true, timezone: true, user: { select: { email: true } } } },
   slot: { select: { startsAt: true, endsAt: true } },
 } as const;
+
+type MailBooking = NonNullable<Awaited<ReturnType<typeof loadMail>>>;
 
 function joinUrl(code: string) {
   return `${env.publicWebUrl}/join?code=${encodeURIComponent(code)}`;
@@ -25,6 +30,27 @@ function joinUrl(code: string) {
 
 function manageUrl(token: string) {
   return `${env.publicWebUrl}/b/${token}`;
+}
+
+function providerJoinUrl() {
+  return `${env.publicWebUrl}/professional`;
+}
+
+function providerManageUrl() {
+  return `${env.publicWebUrl}/professional/bookings`;
+}
+
+function providerWhen(booking: MailBooking) {
+  return formatWhen(booking.slot.startsAt, booking.professional.timezone);
+}
+
+function guestDetailLines(booking: MailBooking) {
+  const name = [booking.guestFirstName, booking.guestLastName].filter(Boolean).join(" ").trim() || "Guest";
+  const lines = [`Guest: ${name}`];
+  if (booking.guestEmail) lines.push(`Email: ${booking.guestEmail}`);
+  if (booking.guestPhone) lines.push(`Phone: ${booking.guestPhone}`);
+  if (booking.guestNote) lines.push(`Note: ${booking.guestNote}`);
+  return lines;
 }
 
 function money(cents: number, currency: string) {
@@ -86,6 +112,7 @@ export async function sendConfirmationAndReceipt(bookingId: string) {
             }),
           },
         });
+        await sendProviderNewBooking(booking);
       } catch (error) {
         console.error("Confirmation email failed", bookingId, error);
         await prisma.booking.updateMany({
@@ -141,13 +168,14 @@ export async function sendReminder(bookingId: string, kind: "24h" | "1h" | "5m")
       to: booking.guestEmail,
       subject: `Ayzon session ${booking.sessionCode} starts ${lead}`,
       text: [
+        `Join: ${joinUrl(booking.sessionCode)}`,
+        "",
         `Your session with ${booking.professional.name} starts ${lead}.`,
         `When: ${when}`,
         `Session code: ${booking.sessionCode}`,
-        "",
-        `Join: ${joinUrl(booking.sessionCode)}`,
       ].join("\n"),
     });
+    await sendProviderReminder(booking, lead);
     return true;
   } catch (error) {
     console.error("Reminder email failed", bookingId, kind, error);
@@ -180,24 +208,94 @@ export async function sendGuestNotice(
   } catch (error) {
     console.error("Guest notice failed", bookingId, kind, error);
   }
+  if (kind === "cancelled" || kind === "rescheduled") {
+    try {
+      await sendProviderChange(booking, kind);
+    } catch (error) {
+      console.error("Provider change email failed", bookingId, kind, error);
+    }
+  }
 }
 
 export async function sendProfessionalRequest(bookingId: string, kind: "cancel" | "reschedule") {
   const booking = await loadMail(bookingId);
   const to = booking?.professional.user.email;
   if (!booking?.sessionCode || !to) return;
-  const when = formatWhen(booking.slot.startsAt, "Africa/Addis_Ababa");
+  const when = providerWhen(booking);
   try {
     await sendMail({
       to,
       subject: `A guest asked to ${kind} ${booking.sessionCode}`,
       text: [
-        `${booking.guestFirstName || "A guest"} asked to ${kind} the session on ${when} (Addis Ababa time).`,
-        "Inside 24 hours, you decide. Open Bookings in Ayzon to accept or decline.",
+        `${booking.guestFirstName || "A guest"} asked to ${kind} the session on ${when}.`,
+        "Inside 24 hours, you decide. Accept or decline from your bookings.",
         `Session code: ${booking.sessionCode}`,
+        "",
+        `Manage: ${providerManageUrl()}`,
       ].join("\n"),
     });
   } catch (error) {
     console.error("Professional request email failed", bookingId, error);
   }
+}
+
+async function sendProviderNewBooking(booking: MailBooking) {
+  const to = booking.professional.user.email;
+  if (!to || !booking.sessionCode) return;
+  await sendMail({
+    to,
+    subject: `New session ${booking.sessionCode}`,
+    text: [
+      `${booking.guestFirstName || "A guest"} booked a session with you.`,
+      "",
+      ...guestDetailLines(booking),
+      "",
+      `When: ${providerWhen(booking)}`,
+      `Session code: ${booking.sessionCode}`,
+      "",
+      `Join: ${providerJoinUrl()}`,
+      `Manage: ${providerManageUrl()}`,
+    ].join("\n"),
+  });
+}
+
+async function sendProviderReminder(booking: MailBooking, lead: string) {
+  const to = booking.professional.user.email;
+  if (!to || !booking.sessionCode) return;
+  await sendMail({
+    to,
+    subject: `Session ${booking.sessionCode} starts ${lead}`,
+    text: [
+      `Join: ${providerJoinUrl()}`,
+      "",
+      `${booking.guestFirstName || "A guest"}'s session starts ${lead}.`,
+      `When: ${providerWhen(booking)}`,
+      `Session code: ${booking.sessionCode}`,
+      "",
+      `Manage: ${providerManageUrl()}`,
+    ].join("\n"),
+  });
+}
+
+async function sendProviderChange(booking: MailBooking, kind: "cancelled" | "rescheduled") {
+  const to = booking.professional.user.email;
+  if (!to || !booking.sessionCode) return;
+  const guest = booking.guestFirstName || "A guest";
+  const when = providerWhen(booking);
+  const text =
+    kind === "cancelled"
+      ? [`The session with ${guest} on ${when} was cancelled.`, `Session code: ${booking.sessionCode}`, "", `Manage: ${providerManageUrl()}`].join("\n")
+      : [
+          `Join: ${providerJoinUrl()}`,
+          "",
+          `The session with ${guest} is now ${when}.`,
+          `Session code: ${booking.sessionCode}`,
+          "",
+          `Manage: ${providerManageUrl()}`,
+        ].join("\n");
+  await sendMail({
+    to,
+    subject: kind === "cancelled" ? `Session ${booking.sessionCode} was cancelled` : `Session ${booking.sessionCode} was rescheduled`,
+    text,
+  });
 }

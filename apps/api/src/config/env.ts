@@ -12,7 +12,7 @@ const schema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   PUBLIC_WEB_URL: z.string().default("http://localhost:3000"),
-  EMAIL_FROM: z.string().default("Ayzon <bookings@ayzoncare.com>"),
+  EMAIL_FROM: z.string().default("አይዞን <bookings@ayzoncare.com>"),
   RESEND_API_KEY: z.string().optional(),
   POSTMARK_SERVER_TOKEN: z.string().optional(),
   DAILY_API_KEY: z.string().optional(),

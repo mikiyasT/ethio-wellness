@@ -2,9 +2,12 @@
 
 import { categoryById, routes } from "@ethio-wellness/shared";
 import { SessionCard } from "@/components/domain/session-card";
+import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { DailyRoom } from "@/components/video/daily-room";
 import { db, type DbBooking, type DbUser } from "@/lib/db";
-import { fetchProfessionalBookings } from "@/lib/bookings-api";
+import { fetchProfessionalBookings, startProfessionalVideo } from "@/lib/bookings-api";
+import { formatOpensIn, getJoinWindow } from "@/lib/guest-booking";
 import { fetchMyAvailability } from "@/lib/pro-api";
 import { loadProDraftForUser } from "@/lib/pro-draft";
 import { usePublicApi } from "@/lib/public-api";
@@ -44,6 +47,15 @@ export default function ProfessionalHomePage() {
   const [upcoming, setUpcoming] = useState<DbBooking[]>([]);
   const [clientsById, setClientsById] = useState<Record<string, DbUser>>({});
   const [hello, setHello] = useState("Good afternoon");
+  const [now, setNow] = useState(() => new Date());
+  const [joining, setJoining] = useState(false);
+  const [videoNote, setVideoNote] = useState("");
+  const [video, setVideo] = useState<{ id: string; token: string; roomUrl: string } | null>(null);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 15_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -101,8 +113,30 @@ export default function ProfessionalHomePage() {
     })();
   }, [ready, user.userId, user.professionalId, user.name]);
 
-  const next = upcoming[0];
+  const live = upcoming
+    .filter((booking) => {
+      const end = booking.endsAt
+        ? new Date(booking.endsAt).getTime()
+        : new Date(booking.slotAt).getTime() + 60 * 60_000;
+      return end > now.getTime();
+    })
+    .sort((a, b) => new Date(a.slotAt).getTime() - new Date(b.slotAt).getTime());
+  const next = live[0];
   const nextName = next ? bookingPersonName(next, clientsById) : undefined;
+  const nextWindow = next ? getJoinWindow(next.slotAt, now, next.endsAt) : null;
+
+  async function onJoin(bookingId: string) {
+    setVideoNote("");
+    setJoining(true);
+    try {
+      const room = await startProfessionalVideo(bookingId);
+      setVideo({ id: bookingId, token: room.token, roomUrl: room.roomUrl });
+    } catch (caught) {
+      setVideoNote(caught instanceof Error ? caught.message : "Video isn’t available right now.");
+    } finally {
+      setJoining(false);
+    }
+  }
 
   return (
     <div>
@@ -153,10 +187,19 @@ export default function ProfessionalHomePage() {
               time="Video call"
               tone="gold"
             />
-            <Button disabled block>
-              {t("sessions.join")}
-            </Button>
-            <p className="text-sm text-ink-3">{t("proHome.videoDisabled")}</p>
+            {video?.id === next.id ? (
+              <DailyRoom roomUrl={video.roomUrl} token={video.token} />
+            ) : (
+              <Button disabled={!nextWindow?.canJoin || joining} block onClick={() => void onJoin(next.id)}>
+                {t("sessions.join")}
+              </Button>
+            )}
+            <p className="text-sm text-ink-3">
+              {nextWindow?.phase === "soon"
+                ? `Join opens in ${formatOpensIn(nextWindow.opensInMs)}.`
+                : "Join is open. Check your camera, then admit the guest from the waiting room."}
+            </p>
+            {videoNote ? <Alert tone="error">{videoNote}</Alert> : null}
           </div>
         </section>
       ) : null}
@@ -191,7 +234,14 @@ export default function ProfessionalHomePage() {
                     </p>
                     <p className="text-sm text-ink-2">{formatProviderEat(booking.slotAt)}</p>
                   </div>
-                  <p className="text-sm text-ink-3">{guestFirstName(booking)}</p>
+                  <div className="flex flex-col items-end gap-2">
+                    <p className="text-sm text-ink-3">{guestFirstName(booking)}</p>
+                    {getJoinWindow(booking.slotAt, now, booking.endsAt).canJoin ? (
+                      <Button size="sm" onClick={() => void onJoin(booking.id)}>
+                        {t("sessions.join")}
+                      </Button>
+                    ) : null}
+                  </div>
                 </article>
               );
             })

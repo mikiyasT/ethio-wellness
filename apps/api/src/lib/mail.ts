@@ -1,11 +1,46 @@
 import { env } from "../config/env.js";
 
+/** Inbox display name stays Amharic. Resend RFC 2047-encodes it; do not fold this to ASCII. */
+export const BRAND_FROM = "አይዞን <bookings@ayzoncare.com>";
+export const BRAND_REPLY_TO = "support@ayzoncare.com";
+const LEGACY_FROM = "Ayzon <bookings@ayzoncare.com>";
+const BRAND_SIGNOFF = "አይዞን!";
+const BRAND_SITE = "ayzoncare.com";
+
 export type OutboundMail = {
   to: string;
   subject: string;
   text: string;
   ics?: { filename: string; content: string };
 };
+
+export function fromAddress() {
+  const configured = env.emailFrom.trim();
+  if (!configured || configured === LEGACY_FROM) return BRAND_FROM;
+  return configured;
+}
+
+export function withBrandFooter(text: string) {
+  return `${text.replace(/\s+$/, "")}\n\n${BRAND_SIGNOFF}\n${BRAND_SITE}`;
+}
+
+/** HTML part uses the OS Ethiopic font. No webfont link or @font-face. */
+export function renderMailHtml(text: string) {
+  const paragraphs = text
+    .replace(/\s+$/, "")
+    .split(/\n{2,}/)
+    .map((block) => `<p style="margin:0 0 16px;">${linkify(escapeHtml(block)).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  return `<!DOCTYPE html><html><body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#1c1917;">${paragraphs}<p style="margin:28px 0 0;font-size:22px;font-weight:700;">${BRAND_SIGNOFF}</p><p style="margin:4px 0 0;font-size:12px;color:#78716c;">${BRAND_SITE}</p></body></html>`;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function linkify(escaped: string) {
+  return escaped.replace(/https?:\/\/[^\s<]+/g, (url) => `<a href="${url}">${url}</a>`);
+}
 
 export function formatWhen(startsAt: Date, timeZone: string | null) {
   const zone = timeZone && isTimeZone(timeZone) ? timeZone : "UTC";
@@ -16,9 +51,14 @@ export function formatWhen(startsAt: Date, timeZone: string | null) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZoneName: "short",
   }).format(startsAt);
-  return label;
+  return `${label} ${zoneLabel(startsAt, zone)}`;
+}
+
+function zoneLabel(startsAt: Date, timeZone: string) {
+  if (timeZone === "Africa/Addis_Ababa") return "EAT";
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short" }).formatToParts(startsAt);
+  return parts.find((part) => part.type === "timeZoneName")?.value ?? timeZone;
 }
 
 export function isTimeZone(value: string) {
@@ -44,7 +84,8 @@ export async function sendMail(message: OutboundMail): Promise<"sent" | "logged"
     console.error(`Email skipped (no provider configured): ${message.subject}`);
     return "skipped";
   }
-  console.log(`\n----- Ayzon email (no provider; logged locally) -----\nTo: ${message.to}\nSubject: ${message.subject}\n\n${message.text}\n-----`);
+  const text = withBrandFooter(message.text);
+  console.log(`\n----- email (no provider; logged locally) -----\nFrom: ${fromAddress()}\nReply-To: ${BRAND_REPLY_TO}\nTo: ${message.to}\nSubject: ${message.subject}\n\n${text}\n-----`);
   return "logged";
 }
 
@@ -56,10 +97,12 @@ async function sendResend(message: OutboundMail) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: env.emailFrom,
+      from: fromAddress(),
+      reply_to: BRAND_REPLY_TO,
       to: [message.to],
       subject: message.subject,
-      text: message.text,
+      text: withBrandFooter(message.text),
+      html: renderMailHtml(message.text),
       attachments: message.ics
         ? [{ filename: message.ics.filename, content: Buffer.from(message.ics.content).toString("base64") }]
         : undefined,
@@ -79,10 +122,12 @@ async function sendPostmark(message: OutboundMail) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      From: env.emailFrom,
+      From: fromAddress(),
+      ReplyTo: BRAND_REPLY_TO,
       To: message.to,
       Subject: message.subject,
-      TextBody: message.text,
+      TextBody: withBrandFooter(message.text),
+      HtmlBody: renderMailHtml(message.text),
       MessageStream: "outbound",
       Attachments: message.ics
         ? [
