@@ -46,7 +46,7 @@ The seed deletes existing rows before inserting. It refuses to run when `NODE_EN
 
 Railway: point the service at the repository root. `railway.toml` builds the API, runs `npm run db:migrate -w @ethio-wellness/api` before each deploy, and health-checks `GET /health`. That migrate command also applies the raw SQL partial unique index on `bookings(slot_id) WHERE status = 'upcoming'`.
 
-Set these as Railway secrets (do not commit them): `DATABASE_URL` (Neon pooled), `DIRECT_URL` (Neon direct), `SESSION_SECRET`, `ADMIN_TOKEN`, `CORS_ORIGIN` (the HTTPS web origin), `COOKIE_SECURE=true`, `PUBLIC_WEB_URL` (the HTTPS web origin), `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` from the Stripe dashboard endpoint that points at `https://<api-host>/stripe/webhook`. With `COOKIE_SECURE=true` the session cookie is `Secure` and `SameSite=None`, so both the website and the API must be HTTPS. Leave `COOKIE_SECURE=false` on this computer.
+Set these as Railway secrets (do not commit them): `DATABASE_URL` (Neon pooled), `DIRECT_URL` (Neon direct), `SESSION_SECRET`, `ADMIN_TOKEN`, `CORS_ORIGIN=https://app.ayzoncare.com`, `COOKIE_SECURE=true`, `PUBLIC_WEB_URL=https://app.ayzoncare.com`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` from the Stripe dashboard endpoint that points at `https://<api-host>/stripe/webhook`, `RESEND_API_KEY`, `EMAIL_FROM`, and `DAILY_API_KEY`. Do not set `ALLOW_DESTRUCTIVE_SEED`. With `COOKIE_SECURE=true` the session cookie is `Secure` and `SameSite=None`, so both the website and the API must be HTTPS. The production web build sets `NEXT_PUBLIC_API_URL` to that same API origin. Leave `COOKIE_SECURE=false` on this computer.
 
 ### Public directory (Phase B)
 
@@ -97,7 +97,7 @@ Hold, checkout, and join are rate limited per IP (20 holds, 10 checkouts, and 30
 
 ### Cutover (Phase F)
 
-The browser does not keep a domain database. Login uses the API only. Shared types `SlotInstant` and `BookingInstant` are the UTC shape. The schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`. The next build is the rescoped Phase 2 in `docs/guest-booking-phases.md` (guest email plus a Daily.co session). It is not started.
+The browser does not keep a domain database. Login uses the API only. Shared types `SlotInstant` and `BookingInstant` are the UTC shape. The schema has no `otp_codes`, `message_log`, `reviews`, or `provider_payouts`. The pilot site is `https://app.ayzoncare.com`. It calls the Railway API. Attendance, completed-session marking, and photo upload wait until after the pilot.
 
 With the API running:
 

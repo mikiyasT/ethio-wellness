@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Noto_Sans_Ethiopic } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
+import { PixelBootstrap } from "@/components/pixel-bootstrap";
 import { PixelPageView } from "@/components/pixel-page-view";
 import { Providers } from "@/components/providers";
 import { themeInitScript } from "@/lib/db";
@@ -20,7 +21,7 @@ const ethiopic = Noto_Sans_Ethiopic({
 export const metadata: Metadata = {
   title: "Ayzon",
   description: "Support for your mind, in the language of your heart.",
-  metadataBase: new URL("https://ayzoncare.com"),
+  metadataBase: new URL("https://app.ayzoncare.com"),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <PixelBootstrap />
       </head>
       <body className="min-h-full font-sans">
         <Providers>
