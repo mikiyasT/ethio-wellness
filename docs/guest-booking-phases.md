@@ -40,7 +40,7 @@
 
 - [x] Wire real Stripe Checkout (test keys → Checkout Session redirect)
 - [x] Light IP rate limit on hold, checkout, and join (email cap of 3 holds remains)
-- [ ] Load Meta Pixel script via env (`NEXT_PUBLIC_META_PIXEL_ID`) when ready
+- [ ] Set `NEXT_PUBLIC_META_PIXEL_ID` on the production web build so the snippet loads before pilot traffic. Events stay PageView, InitiateCheckout, and Purchase (amount and currency only).
 
 ---
 

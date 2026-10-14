@@ -1,7 +1,9 @@
 # API service. Set the Railway root directory to the repository root.
 # Secrets: DATABASE_URL, DIRECT_URL, SESSION_SECRET, ADMIN_TOKEN, CORS_ORIGIN,
-# COOKIE_SECURE=true, PUBLIC_WEB_URL, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET.
-# Web and API must both be HTTPS when COOKIE_SECURE is true.
+# COOKIE_SECURE=true, PUBLIC_WEB_URL=https://app.ayzoncare.com,
+# CORS_ORIGIN=https://app.ayzoncare.com, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+# RESEND_API_KEY, EMAIL_FROM, DAILY_API_KEY.
+# Do not set ALLOW_DESTRUCTIVE_SEED. Web and API must both be HTTPS.
 
 [build]
 builder = "NIXPACKS"

@@ -1,24 +1,19 @@
 import type { CategoryId, LanguageId } from "@ethio-wellness/shared";
 import { formatDayChip, toIsoDate } from "@/lib/availability-editor";
+import { resolveApiBase } from "@/lib/api-base";
 import type { DbProfessional, DbSlot } from "@/lib/db";
 
 const CONFIGURED_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-/** On a phone, localhost is the phone. Use the same host that served the page, on the API port. */
+/** Production calls Railway. The laptop tunnel and a phone on the same Wi-Fi are the only exceptions. */
 export function apiBase() {
   if (typeof window === "undefined") return CONFIGURED_API_URL;
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") return CONFIGURED_API_URL;
-  // A phone on https must call the API on the same secure origin. Next proxies /backend to the API.
-  if (window.location.protocol === "https:") return `${window.location.origin}/backend`;
-  let port = "4000";
-  try {
-    port = new URL(CONFIGURED_API_URL).port || "4000";
-  } catch {
-    port = "4000";
-  }
-  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-  return `${protocol}//${host}:${port}`;
+  return resolveApiBase({
+    configured: CONFIGURED_API_URL,
+    hostname: window.location.hostname,
+    protocol: window.location.protocol,
+    origin: window.location.origin,
+  });
 }
 
 /** Directory, profile, hours, and booking always use the API. The pilot store is not a fallback. */
