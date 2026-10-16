@@ -1,0 +1,15 @@
+# Web service only. Do not point the API service at this file.
+# Railway does not read this automatically. On the web service set:
+#   build: npm run build -w @ethio-wellness/web
+#   start: npm --workspace @ethio-wellness/web run start
+# NEXT_PUBLIC_API_URL is in apps/web/.env.production and is baked in at build time.
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build -w @ethio-wellness/web"
+
+[deploy]
+startCommand = "npm --workspace @ethio-wellness/web run start"
+healthcheckPath = "/"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
