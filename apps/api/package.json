@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
-    "start": "node dist/main.js",
+    "start": "node scripts/migrate-deploy.mjs && node dist/main.js",
     "smoke": "tsx scripts/smoke.mts",
     "test": "tsx --test test/eat.test.ts test/lead-time.test.ts test/country.test.ts test/join-window.test.ts test/mail-brand.test.ts test/phase2-manage.test.ts",
-    "db:migrate": "prisma migrate deploy",
+    "db:migrate": "node scripts/migrate-deploy.mjs",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma migrate deploy && tsx prisma/seed.ts"
   },
@@ -19,6 +19,7 @@
   "dependencies": {
     "@ethio-wellness/shared": "*",
     "@prisma/client": "^6.16.2",
+    "prisma": "^6.16.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -31,7 +32,6 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
-    "prisma": "^6.16.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
