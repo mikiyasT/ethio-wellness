@@ -19,6 +19,12 @@ enum ProfessionalStatus {
   rejected
 }
 
+enum AboutLang {
+  am
+  om
+  ti
+}
+
 enum SlotStatus {
   open
   closed
@@ -97,8 +103,10 @@ model Professional {
   country      String             @default("ET")
   timezone     String             @default("Africa/Addis_Ababa")
   credentials  String             @default("")
-  bio          String
-  practiceMore String             @default("")
+  bio                  String
+  aboutTranslated      String?
+  aboutTranslatedLang  AboutLang?
+  practiceMore         String             @default("")
   languages    String[]
   specialties  String[]
   feeCents     Int

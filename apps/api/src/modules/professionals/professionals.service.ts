@@ -1,4 +1,5 @@
-import type { Professional } from "@prisma/client";
+import type { AboutLang, Professional } from "@prisma/client";
+import { bilingualBioErrors, type AboutLang as SharedAboutLang } from "@ethio-wellness/shared/bilingual-bio";
 import { isCountryCode, primaryTimeZone } from "@ethio-wellness/shared/countries";
 import { categories, languageIds, type CategoryId, type LanguageId } from "../catalog.js";
 import { releaseExpiredHolds } from "../../lib/hold-sweeper.js";
@@ -39,6 +40,9 @@ export function toPublicProfessional(pro: Professional) {
     timezone: pro.timezone,
     credentials: pro.credentials,
     bio: pro.bio,
+    about: pro.bio,
+    aboutTranslated: pro.aboutTranslated,
+    aboutTranslatedLang: pro.aboutTranslatedLang,
     practiceMore: pro.practiceMore,
     languages: pro.languages,
     specialties: pro.specialties,
@@ -98,6 +102,9 @@ export async function updateMyProfessional(
     city?: string;
     credentials?: string;
     bio?: string;
+    about?: string;
+    aboutTranslated?: string | null;
+    aboutTranslatedLang?: AboutLang | null;
     practiceMore?: string;
     languages?: string[];
     specialties?: string[];
@@ -108,6 +115,26 @@ export async function updateMyProfessional(
 ) {
   if (input.languages?.some((id) => !allowedLanguages.has(id))) return "invalid_catalog" as const;
   if (input.specialties?.some((id) => !allowedCategories.has(id))) return "invalid_catalog" as const;
+
+  const existing = await prisma.professional.findUnique({ where: { id: professionalId } });
+  if (!existing) return "not_found" as const;
+
+  const touchesTranslation = input.aboutTranslated !== undefined || input.aboutTranslatedLang !== undefined;
+  const english = (input.about ?? input.bio ?? existing.bio).trim();
+  const translated =
+    input.aboutTranslated !== undefined ? (input.aboutTranslated ?? "").trim() : (existing.aboutTranslated ?? "");
+  const translatedLang =
+    input.aboutTranslatedLang !== undefined ? input.aboutTranslatedLang : existing.aboutTranslatedLang;
+  const languages = (input.languages ?? existing.languages) as LanguageId[];
+  if (touchesTranslation) {
+    const [issue] = bilingualBioErrors({
+      about: english,
+      aboutTranslated: translated,
+      aboutTranslatedLang: translatedLang as SharedAboutLang | null,
+      languages,
+    });
+    if (issue) return issue.issue;
+  }
 
   const country = input.country?.trim().toUpperCase();
   if (country !== undefined && !isCountryCode(country)) return "invalid_country" as const;
@@ -127,7 +154,9 @@ export async function updateMyProfessional(
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.city !== undefined ? { city: input.city } : {}),
       ...(input.credentials !== undefined ? { credentials: input.credentials } : {}),
-      ...(input.bio !== undefined ? { bio: input.bio } : {}),
+      ...(input.about !== undefined || input.bio !== undefined ? { bio: english } : {}),
+      ...(input.aboutTranslated !== undefined ? { aboutTranslated: translated || null } : {}),
+      ...(input.aboutTranslatedLang !== undefined ? { aboutTranslatedLang: translatedLang } : {}),
       ...(input.practiceMore !== undefined ? { practiceMore: input.practiceMore } : {}),
       ...(input.languages !== undefined ? { languages: input.languages } : {}),
       ...(input.specialties !== undefined ? { specialties: input.specialties } : {}),

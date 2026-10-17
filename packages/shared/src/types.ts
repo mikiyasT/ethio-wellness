@@ -42,6 +42,10 @@ export interface Professional {
   rating: number;
   reviewCount: number;
   bio: string;
+  /** English bio. Same text as `bio`; present on API profiles. */
+  about?: string;
+  aboutTranslated?: string | null;
+  aboutTranslatedLang?: "am" | "om" | "ti" | null;
   /** Pilot: new professionals wait for manual approval before practicing. */
   status?: "pending" | "approved";
 }

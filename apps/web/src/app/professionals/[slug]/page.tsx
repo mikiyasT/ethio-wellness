@@ -1,6 +1,7 @@
 "use client";
 
 import { LANGUAGES, categoryById, routes } from "@ethio-wellness/shared";
+import { AboutCarousel } from "@/components/domain/about-carousel";
 import { BookChoiceDialog } from "@/components/domain/book-choice-dialog";
 import { SlotChip } from "@/components/domain/slot-chip";
 import { Avatar } from "@/components/ui/avatar";
@@ -331,7 +332,11 @@ export default function ProfessionalDetailPage() {
           </div>
           <section className="mt-8">
             <h2 className="text-2xl font-semibold">{t("detail.about")}</h2>
-            <p className="mt-2 leading-7 text-ink-2">{professional.bio}</p>
+            <AboutCarousel
+              about={dbPro.bio}
+              aboutTranslated={dbPro.aboutTranslated}
+              aboutTranslatedLang={dbPro.aboutTranslatedLang}
+            />
           </section>
           <section className="mt-8">
             <h2 className="text-2xl font-semibold">{t("detail.specialties")}</h2>

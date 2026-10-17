@@ -33,6 +33,9 @@ const profileSchema = z
     city: z.string().trim().max(80).optional(),
     credentials: z.string().max(200).optional(),
     bio: z.string().max(2000).optional(),
+    about: z.string().max(2000).optional(),
+    aboutTranslated: z.string().max(2000).nullable().optional(),
+    aboutTranslatedLang: z.enum(["am", "om", "ti"]).nullable().optional(),
     practiceMore: z.string().max(2000).optional(),
     languages: z.array(z.string()).max(8).optional(),
     specialties: z.array(z.string()).max(12).optional(),
@@ -73,11 +76,11 @@ professionalsRouter.patch("/me", async (req, res) => {
   try {
     const user = await professionalFromCookie(req.headers.cookie);
     const professional = await updateMyProfessional(user.professionalId!, parsed.data);
-    if (
-      professional === "invalid_catalog" ||
-      professional === "invalid_country" ||
-      professional === "invalid_timezone"
-    ) {
+    if (professional === "not_found") {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    if (typeof professional === "string") {
       res.status(400).json({ error: professional });
       return;
     }

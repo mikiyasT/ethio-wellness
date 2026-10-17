@@ -44,6 +44,7 @@ export default function ProfessionalHomePage() {
   const router = useRouter();
   const { user, ready } = useSession();
   const [checklist, setChecklist] = useState({ about: false, specs: false, avail: false });
+  const [needsSecondBio, setNeedsSecondBio] = useState(false);
   const [upcoming, setUpcoming] = useState<DbBooking[]>([]);
   const [clientsById, setClientsById] = useState<Record<string, DbUser>>({});
   const [hello, setHello] = useState("Good afternoon");
@@ -79,6 +80,7 @@ export default function ProfessionalHomePage() {
           specs: draft.specialties.length > 0,
           avail: slots.some((slot) => slot.status === "open"),
         });
+        setNeedsSecondBio(Boolean(draft.bio.trim()) && !draft.aboutTranslated.trim());
         const bookings = user.professionalId ? await fetchProfessionalBookings() : [];
         setUpcoming(bookings.filter((booking) => booking.status === "upcoming"));
         setHello(`Good afternoon, ${draft.name || user.name || "there"} 👋`);
@@ -96,6 +98,7 @@ export default function ProfessionalHomePage() {
         specs: draft.specialties.length > 0,
         avail: slots.some((slot) => slot.status === "open"),
       });
+      setNeedsSecondBio(Boolean(draft.bio.trim()) && !draft.aboutTranslated.trim());
 
       const list = (await db.bookings.listForProfessional(pro.id)).filter(
         (booking) => booking.status === "upcoming",
@@ -143,6 +146,16 @@ export default function ProfessionalHomePage() {
       <h1 className="text-[32px] font-bold text-ink md:text-[40px]">{hello}</h1>
       <p className="mt-2 text-ink-2">{t("proHome.dateLine")}</p>
 
+      {needsSecondBio ? (
+        <div className="mt-6">
+          <Alert tone="warning">
+            Complete your profile — add your second-language bio so guests can read it in your language.{" "}
+            <a href={routes.professionalProfile} className="font-medium underline">
+              Add it on your profile
+            </a>
+          </Alert>
+        </div>
+      ) : null}
       <section className="mt-6 rounded-2xl border border-border bg-surface p-5">
         <h2 className="font-semibold text-ink">{t("proHome.checklistTitle")}</h2>
         <ul className="mt-3 space-y-2 text-sm">
