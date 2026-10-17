@@ -8,7 +8,7 @@
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node scripts/migrate-deploy.mjs && node dist/main.js",
     "smoke": "tsx scripts/smoke.mts",
-    "test": "tsx --test test/eat.test.ts test/lead-time.test.ts test/country.test.ts test/join-window.test.ts test/mail-brand.test.ts test/phase2-manage.test.ts",
+    "test": "tsx --test test/eat.test.ts test/lead-time.test.ts test/country.test.ts test/join-window.test.ts test/mail-brand.test.ts test/phase2-manage.test.ts test/bilingual-bio.test.ts",
     "db:migrate": "node scripts/migrate-deploy.mjs",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma migrate deploy && tsx prisma/seed.ts"

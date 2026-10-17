@@ -1,4 +1,4 @@
-import type { CategoryId, LanguageId } from "@ethio-wellness/shared";
+import type { AboutLang, CategoryId, LanguageId } from "@ethio-wellness/shared";
 import { apiBase } from "@/lib/public-api";
 import type { ProDraft } from "@/lib/pro-draft";
 
@@ -10,6 +10,9 @@ export type MyProfessional = {
   city: string;
   credentials: string;
   bio: string;
+  about?: string;
+  aboutTranslated?: string | null;
+  aboutTranslatedLang?: AboutLang | null;
   practiceMore: string;
   languages: LanguageId[];
   specialties: CategoryId[];
@@ -59,7 +62,11 @@ export async function fetchMyProfessional() {
 export function saveMyProfessional(draft: ProDraft) {
   return proRequest<{ professional: MyProfessional }>("/professionals/me", {
     method: "PATCH",
-    body: JSON.stringify(draft),
+    body: JSON.stringify({
+      ...draft,
+      about: draft.bio,
+      aboutTranslatedLang: draft.aboutTranslatedLang || null,
+    }),
   });
 }
 

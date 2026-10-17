@@ -1,6 +1,7 @@
 "use client";
 
-import { LANGUAGES, routes, type LanguageId, type Professional } from "@ethio-wellness/shared";
+import { LANGUAGES, bilingualBioErrors, routes, type LanguageId, type Professional } from "@ethio-wellness/shared";
+import { BilingualBioFields } from "@/components/domain/bilingual-bio-fields";
 import { ProfessionalCard } from "@/components/domain/professional-card";
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
@@ -27,6 +28,7 @@ export default function ProfessionalProfilePage() {
   const [previewBase, setPreviewBase] = useState<Professional | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<"about" | "aboutTranslated" | "aboutTranslatedLang", string>>>({});
 
   useEffect(() => {
     if (!ready || !user.userId) return;
@@ -98,10 +100,23 @@ export default function ProfessionalProfilePage() {
       setError("Display name and professional title are required.");
       return;
     }
-    if (draft.languages.length < 1) {
-      setError(t("proOnboard.langRequired"));
+    const bioErrors = bilingualBioErrors({
+      about: draft.bio,
+      aboutTranslated: draft.aboutTranslated,
+      aboutTranslatedLang: draft.aboutTranslatedLang,
+      languages: draft.languages,
+    });
+    if (bioErrors.length > 0) {
+      const next: Partial<Record<"about" | "aboutTranslated" | "aboutTranslatedLang", string>> = {};
+      for (const item of bioErrors) {
+        if (item.field !== "languages" && !next[item.field]) next[item.field] = item.message;
+      }
+      setFieldErrors(next);
+      setError(bioErrors.find((item) => item.field === "languages")?.message ?? "");
+      setSaved(false);
       return;
     }
+    setFieldErrors({});
     setError("");
     await saveProDraftForUser(user.userId, draft);
     setBaseline(draft);
@@ -171,10 +186,23 @@ export default function ProfessionalProfilePage() {
             ))}
           </select>
         </label>
-        <TextAreaField
-          label={t("proProfile.bio")}
-          value={draft.bio}
-          onChange={(event) => setDraft((current) => ({ ...current, bio: event.target.value }))}
+        {draft.bio.trim() && !draft.aboutTranslated.trim() ? (
+          <Alert tone="warning">Complete your profile — add your second-language bio so guests can read it in your language.</Alert>
+        ) : null}
+        <BilingualBioFields
+          about={draft.bio}
+          aboutTranslated={draft.aboutTranslated}
+          aboutTranslatedLang={draft.aboutTranslatedLang}
+          errors={fieldErrors}
+          onChange={(next) => {
+            setFieldErrors({});
+            setDraft((current) => ({
+              ...current,
+              bio: next.about,
+              aboutTranslated: next.aboutTranslated,
+              aboutTranslatedLang: next.aboutTranslatedLang,
+            }));
+          }}
         />
         <TextAreaField
           label={t("proProfile.more")}

@@ -7,6 +7,7 @@ import {
   availabilitySlots as sampleSlots,
   bookings as sampleBookings,
   professionals as sampleProfessionals,
+  type AboutLang,
   type CategoryId,
   type LanguageId,
   type Professional,
@@ -49,6 +50,8 @@ export interface DbProfessional {
   country?: string;
   credentials: string;
   bio: string;
+  aboutTranslated?: string | null;
+  aboutTranslatedLang?: AboutLang | null;
   practiceMore: string;
   languages: LanguageId[];
   specialties: CategoryId[];

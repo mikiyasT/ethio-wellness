@@ -1,4 +1,4 @@
-import type { CategoryId, LanguageId } from "@ethio-wellness/shared";
+import type { AboutLang, CategoryId, LanguageId } from "@ethio-wellness/shared";
 import { db, type DbProfessional } from "@/lib/db";
 import { fetchMyProfessional, saveMyProfessional } from "@/lib/pro-api";
 import { usePublicApi } from "@/lib/public-api";
@@ -18,6 +18,8 @@ export interface ProDraft {
   city: string;
   credentials: string;
   bio: string;
+  aboutTranslated: string;
+  aboutTranslatedLang: AboutLang | "";
   practiceMore: string;
   languages: LanguageId[];
   specialties: CategoryId[];
@@ -31,6 +33,8 @@ export const emptyProDraft = (name = ""): ProDraft => ({
   city: "Addis Ababa",
   credentials: "",
   bio: "",
+  aboutTranslated: "",
+  aboutTranslatedLang: "",
   practiceMore: "",
   languages: [],
   specialties: [],
@@ -44,6 +48,8 @@ export function draftFromProfessional(pro: DbProfessional): ProDraft {
     city: pro.city || "Addis Ababa",
     credentials: pro.credentials,
     bio: pro.bio,
+    aboutTranslated: pro.aboutTranslated ?? "",
+    aboutTranslatedLang: pro.aboutTranslatedLang ?? "",
     practiceMore: pro.practiceMore,
     languages: [...pro.languages],
     specialties: [...pro.specialties],
@@ -61,6 +67,8 @@ export async function loadProDraftForUser(userId: string, fallbackName = ""): Pr
         city: pro.city || "Addis Ababa",
         credentials: pro.credentials,
         bio: pro.bio,
+        aboutTranslated: pro.aboutTranslated ?? "",
+        aboutTranslatedLang: pro.aboutTranslatedLang ?? "",
         practiceMore: pro.practiceMore,
         languages: pro.languages,
         specialties: pro.specialties,
@@ -88,6 +96,8 @@ export async function saveProDraftForUser(userId: string, draft: ProDraft): Prom
     city: draft.city,
     credentials: draft.credentials,
     bio: draft.bio,
+    aboutTranslated: draft.aboutTranslated,
+    aboutTranslatedLang: draft.aboutTranslatedLang || null,
     practiceMore: draft.practiceMore,
     languages: draft.languages,
     specialties: draft.specialties,

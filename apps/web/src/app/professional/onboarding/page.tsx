@@ -1,10 +1,11 @@
 "use client";
 
-import { LANGUAGES, categories, routes, type CategoryId, type LanguageId } from "@ethio-wellness/shared";
+import { LANGUAGES, bilingualBioErrors, categories, routes, type CategoryId, type LanguageId } from "@ethio-wellness/shared";
 import { COUNTRY_CODES } from "@ethio-wellness/shared/countries";
+import { BilingualBioFields } from "@/components/domain/bilingual-bio-fields";
 import { Chip } from "@/components/ui/chip";
 import { Alert } from "@/components/ui/alert";
-import { TextAreaField, TextField } from "@/components/ui/field";
+import { TextField } from "@/components/ui/field";
 import { CITIES, emptyProDraft, loadProDraftForUser, saveProDraftForUser, type ProDraft } from "@/lib/pro-draft";
 import { useLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
@@ -18,6 +19,7 @@ export default function ProfessionalOnboardingPage() {
   const { user, ready } = useSession();
   const [draft, setDraft] = useState<ProDraft>(emptyProDraft());
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<"about" | "aboutTranslated" | "aboutTranslatedLang", string>>>({});
   const countries = useMemo(() => {
     const names = new Intl.DisplayNames(["en"], { type: "region" });
     return COUNTRY_CODES.map((code) => ({ code, label: names.of(code) ?? code })).sort((a, b) =>
@@ -51,14 +53,27 @@ export default function ProfessionalOnboardingPage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user.userId) return;
-    if (draft.languages.length < 1) {
-      setError(t("proOnboard.langRequired"));
+    const bioErrors = bilingualBioErrors({
+      about: draft.bio,
+      aboutTranslated: draft.aboutTranslated,
+      aboutTranslatedLang: draft.aboutTranslatedLang,
+      languages: draft.languages,
+    });
+    if (bioErrors.length > 0) {
+      const next: Partial<Record<"about" | "aboutTranslated" | "aboutTranslatedLang", string>> = {};
+      for (const item of bioErrors) {
+        if (item.field !== "languages" && !next[item.field]) next[item.field] = item.message;
+      }
+      setFieldErrors(next);
+      setError(bioErrors.find((item) => item.field === "languages")?.message ?? "");
       return;
     }
     if (draft.specialties.length < 1) {
+      setFieldErrors({});
       setError(t("proOnboard.specRequired"));
       return;
     }
+    setFieldErrors({});
     setError("");
     await saveProDraftForUser(user.userId, draft);
     router.push(`${routes.professionalSpecialties}?from=onboarding`);
@@ -148,12 +163,21 @@ export default function ProfessionalOnboardingPage() {
           value={draft.credentials}
           onChange={(event) => setDraft((current) => ({ ...current, credentials: event.target.value }))}
         />
-        <TextAreaField
-          label="Bio"
-          name="bio"
-          placeholder={t("proOnboard.bio")}
-          value={draft.bio}
-          onChange={(event) => setDraft((current) => ({ ...current, bio: event.target.value }))}
+        <BilingualBioFields
+          about={draft.bio}
+          aboutTranslated={draft.aboutTranslated}
+          aboutTranslatedLang={draft.aboutTranslatedLang}
+          errors={fieldErrors}
+          onChange={(next) => {
+            setFieldErrors({});
+            setError("");
+            setDraft((current) => ({
+              ...current,
+              bio: next.about,
+              aboutTranslated: next.aboutTranslated,
+              aboutTranslatedLang: next.aboutTranslatedLang,
+            }));
+          }}
         />
         <div>
           <p className="mb-2 text-sm font-medium">{t("detail.specialties")}</p>

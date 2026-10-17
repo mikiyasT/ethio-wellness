@@ -1,4 +1,4 @@
-import type { CategoryId, LanguageId } from "@ethio-wellness/shared";
+import type { AboutLang, CategoryId, LanguageId } from "@ethio-wellness/shared";
 import { formatDayChip, toIsoDate } from "@/lib/availability-editor";
 import { resolveApiBase } from "@/lib/api-base";
 import type { DbProfessional, DbSlot } from "@/lib/db";
@@ -30,6 +30,9 @@ type ApiProfessional = {
   country: string;
   credentials: string;
   bio: string;
+  about?: string;
+  aboutTranslated?: string | null;
+  aboutTranslatedLang?: AboutLang | null;
   practiceMore: string;
   languages: LanguageId[];
   specialties: CategoryId[];
@@ -79,7 +82,9 @@ function toDbProfessional(pro: ApiProfessional): DbProfessional {
     city: pro.city,
     country: pro.country,
     credentials: pro.credentials,
-    bio: pro.bio,
+    bio: pro.about || pro.bio,
+    aboutTranslated: pro.aboutTranslated,
+    aboutTranslatedLang: pro.aboutTranslatedLang,
     practiceMore: pro.practiceMore,
     languages: pro.languages,
     specialties: pro.specialties,
