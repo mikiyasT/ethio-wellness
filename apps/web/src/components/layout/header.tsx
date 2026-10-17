@@ -39,8 +39,6 @@ export function Header({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const nav = role === "client" ? clientNav : role === "professional" ? professionalNav : guestNav;
-  const homeHref =
-    role === "client" ? routes.clientHome : role === "professional" ? routes.professionalHome : routes.home;
   const avatarInitials = initialsFromName(user.name, role);
 
   function isActive(href: string) {
@@ -57,7 +55,7 @@ export function Header({ role }: { role: UserRole }) {
   return (
     <header className="sticky top-0 z-40 w-full max-w-[100vw] overflow-x-clip border-b border-border/70 bg-bg/95 backdrop-blur">
       <div className="mx-auto flex min-h-[72px] w-full max-w-[1200px] items-center justify-between gap-2 px-4 sm:gap-4">
-        <Link href={homeHref} className="flex min-w-0 shrink items-center gap-2 font-semibold text-ink">
+        <Link href={routes.home} className="flex min-w-0 shrink items-center gap-2 font-semibold text-ink">
           <BrandMark />
           <span className="hidden sm:inline">{t("brand")}</span>
         </Link>

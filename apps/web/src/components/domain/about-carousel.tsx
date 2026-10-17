@@ -22,8 +22,8 @@ export function AboutCarousel({
     return <p className="mt-2 leading-7 text-ink-2">Nothing for now</p>;
   }
   const cards: Card[] = [];
-  if (english) cards.push({ label: "English", text: english });
   if (second && translated) cards.push({ label: second.chip, text: translated });
+  if (english) cards.push({ label: "English", text: english });
   if (cards.length < 2) {
     return <BioCard card={cards[0]!} />;
   }
@@ -33,8 +33,7 @@ export function AboutCarousel({
 function BioCard({ card }: { card: Card }) {
   return (
     <article className="mt-3 rounded-2xl border border-border bg-surface p-5">
-      <p className="text-xs font-medium text-ink-2">{card.label}</p>
-      <p className="mt-3 whitespace-pre-wrap leading-7 text-ink-2">{card.text}</p>
+      <p className="whitespace-pre-wrap leading-7 text-ink-2">{card.text}</p>
     </article>
   );
 }
@@ -92,8 +91,7 @@ function Swipeable({ cards }: { cards: Card[] }) {
             aria-roledescription="slide"
             aria-label={card.label}
           >
-            <p className="text-xs font-medium text-ink-2">{card.label}</p>
-            <p className="mt-3 whitespace-pre-wrap leading-7 text-ink-2">{card.text}</p>
+            <p className="whitespace-pre-wrap leading-7 text-ink-2">{card.text}</p>
             <span className="sr-only">
               Slide {cardIndex + 1} of {cards.length}
             </span>
